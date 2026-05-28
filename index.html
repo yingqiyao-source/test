@@ -773,7 +773,6 @@ function createAddModalElements() {
   overlay.innerHTML = `<div class="modal">
     <h3 id="add-modal-title">添加词语</h3>
     <div id="add-manual">
-      <div id="add-manual">
       <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">类型</label><select id="add-type" style="margin-top:4px" onchange="updateAddPlaceholders(this.value)"><option value="cn">语文词语</option><option value="en" selected>英语单词</option><option value="en-sentence">英语句子</option><option value="textbook">课文默写</option></select></div>
       <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">所属集合</label><select id="add-collection" onchange="onAddCollChange(this)" style="margin-top:4px;width:100%;padding:6px;border-radius:6px;border:1px solid #ddd;background:#fff;font-size:14px"><option value="">— 选择集合（可选）—</option></select></div>
       <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)" id="add-word-label">词语/单词</label><input id="add-word" placeholder="如：璀璨 / beautiful" style="margin-top:4px"></div>
