@@ -1364,59 +1364,34 @@ function renderStats() {
 
 // ===== Photo OCR =====
 let cameraStream = null;
+
+// 使用 Capacitor Camera 插件（如果在 Capacitor 环境中）
 function capturePhoto() {
   var status = document.getElementById('ocr-status');
   status.textContent = '正在启动摄像头...';
   
-  // 检查是否支持 getUserMedia
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    status.innerHTML = '当前环境不支持摄像头，请使用"选图片"按钮<br><small>（APK 内嵌 WebView 可能限制摄像头访问）</small>';
-    return;
-  }
-  
-  // 尝试获取摄像头，优先后置，失败后尝试任意摄像头
-  var constraints = { video: { facingMode: 'environment' } };
-  
-  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-    setupVideo(stream, status);
-  }).catch(function(err) {
-    console.log('后置摄像头失败，尝试任意摄像头:', err);
-    // 尝试不指定 facingMode
-    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
-      setupVideo(stream, status);
-    }).catch(function(err2) {
-      console.error('摄像头访问失败:', err2);
-      status.innerHTML = '无法访问摄像头，请使用"选图片"按钮<br><small>错误: ' + (err2.name || err2.message || '权限被拒绝') + '</small>';
+  // 检查是否在 Capacitor 环境中
+  if (typeof Capacitor !== 'undefined' && Capacitor.isPluginAvailable('Camera')) {
+    // 使用 Capacitor Camera 插件
+    const { Camera } = Capacitor.Plugins;
+    Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: 'dataUrl',
+      source: 'CAMERA',
+      direction: 'REAR'
+    }).then(function(image) {
+      status.textContent = '识别中...';
+      processOCRImage(image.dataUrl);
+    }).catch(function(err) {
+      console.error('Camera error:', err);
+      // 如果相机失败，提示用户使用选图片按钮
+      status.innerHTML = '拍照失败，请使用"选图片"按钮<br><small>错误: ' + (err.message || err) + '</small>';
     });
-  });
-}
-
-function setupVideo(stream, status) {
-  cameraStream = stream;
-  var video = document.createElement('video');
-  video.autoplay = true;
-  video.playsInline = true;
-  video.muted = true;
-  video.style.cssText = 'width:100%;border-radius:8px;background:#000';
-  status.parentNode.insertBefore(video, status);
-  video.srcObject = stream;
-  
-  video.onloadedmetadata = function() {
-    video.play();
-    status.textContent = '点击画面拍照';
-  };
-  
-  video.onclick = function() {
-    var canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    stopCamera();
-    // 移除 video 元素
-    if (video.parentNode) video.parentNode.removeChild(video);
-    processOCRImage(dataUrl);
-  };
+  } else {
+    // 降级方案：使用文件选择
+    status.innerHTML = '当前环境不支持直接拍照<br>请使用"选图片"按钮选择照片';
+  }
 }
 
 function stopCamera() {
