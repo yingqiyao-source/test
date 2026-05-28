@@ -1367,27 +1367,56 @@ let cameraStream = null;
 function capturePhoto() {
   var status = document.getElementById('ocr-status');
   status.textContent = '正在启动摄像头...';
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function(stream) {
-    cameraStream = stream;
-    var video = document.createElement('video');
-    video.autoplay = true;
-    video.playsInline = true;
-    video.style.cssText = 'width:100%;border-radius:8px';
-    status.parentNode.insertBefore(video, status);
-    video.srcObject = stream;
-    status.textContent = '点击屏幕拍照';
-    video.onclick = function() {
-      var canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      var dataUrl = canvas.toDataURL('image/jpeg');
-      stopCamera();
-      processOCRImage(dataUrl);
-    };
-  }).catch(function() {
-    status.textContent = '无法访问摄像头，请使用"选图片"按钮';
+  
+  // 检查是否支持 getUserMedia
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    status.innerHTML = '当前环境不支持摄像头，请使用"选图片"按钮<br><small>（APK 内嵌 WebView 可能限制摄像头访问）</small>';
+    return;
+  }
+  
+  // 尝试获取摄像头，优先后置，失败后尝试任意摄像头
+  var constraints = { video: { facingMode: 'environment' } };
+  
+  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+    setupVideo(stream, status);
+  }).catch(function(err) {
+    console.log('后置摄像头失败，尝试任意摄像头:', err);
+    // 尝试不指定 facingMode
+    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+      setupVideo(stream, status);
+    }).catch(function(err2) {
+      console.error('摄像头访问失败:', err2);
+      status.innerHTML = '无法访问摄像头，请使用"选图片"按钮<br><small>错误: ' + (err2.name || err2.message || '权限被拒绝') + '</small>';
+    });
   });
+}
+
+function setupVideo(stream, status) {
+  cameraStream = stream;
+  var video = document.createElement('video');
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = true;
+  video.style.cssText = 'width:100%;border-radius:8px;background:#000';
+  status.parentNode.insertBefore(video, status);
+  video.srcObject = stream;
+  
+  video.onloadedmetadata = function() {
+    video.play();
+    status.textContent = '点击画面拍照';
+  };
+  
+  video.onclick = function() {
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    stopCamera();
+    // 移除 video 元素
+    if (video.parentNode) video.parentNode.removeChild(video);
+    processOCRImage(dataUrl);
+  };
 }
 
 function stopCamera() {
