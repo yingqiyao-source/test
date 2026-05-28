@@ -1,0 +1,60 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Install dependencies
+      run: |
+        npm install @capacitor/core @capacitor/cli @capacitor/android@latest
+    
+    - name: Prepare web assets
+      run: |
+        mkdir -p www
+        cp index.html www/index.html
+    
+    - name: Initialize Capacitor (if not already)
+      run: |
+        if [ ! -f capacitor.config.json ]; then
+          npx cap init "默写助手" "com.dictation.app" --web-dir=www
+        fi
+    
+    - name: Add Android platform
+      run: |
+        if [ ! -d android ]; then
+          npx cap add android
+        fi
+    
+    - name: Sync Capacitor
+      run: npx cap sync android
+    
+    - name: Build APK (debug)
+      working-directory: android
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: dictation-app-debug
+        path: android/app/build/outputs/apk/debug/app-debug.apk
