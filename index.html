@@ -265,7 +265,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="actions">
     <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">全选/取消</button>
     <button class="btn btn-danger btn-sm" onclick="deleteSelectedWords()">删除选中</button>
-    <select id="batch-move-collection" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;margin-left:4px">
+    <select id="batch-move-collection" onchange="onBatchCollChange(this)" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;margin-left:4px">
       <option value="">移动到...</option>
     </select>
     <button class="btn btn-outline btn-sm" onclick="moveSelectedToCollection()" style="margin-left:2px">移动</button>
@@ -345,9 +345,55 @@ function updateBatchBar() {
     var cur = sel.value;
     sel.innerHTML = '<option value="">移动到...</option>' + cols.map(function(c) {
       return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
-    }).join('');
+    }).join('') + '<option value="__new__">+ 新建集合</option>';
     if (cols.indexOf(cur) > -1) sel.value = cur;
   }
+}
+function onBatchCollChange(sel) {
+  if (sel.value === '__new__') {
+    sel.value = '';
+    var name = prompt('请输入新集合名称（支持多级，如：三年级/第一单元）：');
+    if (!name || !name.trim()) return;
+    name = name.trim();
+    if (selectedWordIndices.size === 0) return;
+    var oldCur = sel.getAttribute('data-last-value') || '';
+    if (oldCur && cols.indexOf(oldCur) === -1) {
+      var opt = document.createElement('option');
+      opt.value = oldCur; opt.textContent = oldCur;
+      sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
+    }
+    sel.setAttribute('data-last-value', name);
+    // Apply the move
+    selectedWordIndices.forEach(function(idx) {
+      if (words[idx]) words[idx].collection = name;
+    });
+    saveData();
+    sel.value = '';
+    sel.innerHTML = '<option value="">移动到...</option>' +
+      Object.keys(words.reduce(function(s, w) { s[w.collection||'未分类']=true; return s; }, {})).sort().map(function(c) {
+        return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
+      }).join('') + '<option value="__new__">+ 新建集合</option>';
+    sel.value = name;
+    selectedWordIndices.clear();
+    updateBatchBar();
+    renderWordList();
+    return;
+  }
+  sel.setAttribute('data-last-value', sel.value);
+  if (selectedWordIndices.size === 0) return;
+  var newColl = sel.value;
+  selectedWordIndices.forEach(function(idx) {
+    if (words[idx]) words[idx].collection = newColl;
+  });
+  saveData();
+  sel.value = '';
+  sel.innerHTML = '<option value="">移动到...</option>' +
+    Object.keys(words.reduce(function(s, w) { s[w.collection||'未分类']=true; return s; }, {})).sort().map(function(c) {
+      return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
+    }).join('') + '<option value="__new__">+ 新建集合</option>';
+  selectedWordIndices.clear();
+  updateBatchBar();
+  renderWordList();
 }
 
 function deleteSelectedWords() {
@@ -748,7 +794,7 @@ function renderWordList() {
       var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
       var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
       out += '<div class="collection-group" id="' + collId + '">' +
-        '<div class="collection-header" style="' + bgStyle + '" onclick="toggleCollection(\'' + escapeHtml(collPath) + '')">' +
+        '<div class="collection-header" style="' + bgStyle + '" onclick="toggleCollection(\'' + escapeHtml(collPath) + '\')">' +
           '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
           '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(key) + '</span>' +
           '<span class="coll-count">' + totalItems + '</span>' +
