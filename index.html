@@ -796,7 +796,7 @@ function renderWordList() {
   }
 
   // Build tree from collection paths split by /
-  var tree = {};  // simple object: key = segment, value = { items: [], children: {} }
+  var tree = {};
   var ungroupedItems = [];
   filtered.forEach(function(w) {
     var collPath = w.collection;
@@ -806,15 +806,12 @@ function renderWordList() {
     for (var i = 0; i < parts.length; i++) {
       var seg = parts[i];
       if (!node[seg]) node[seg] = { items: [], children: {}, _fullPath: parts.slice(0, i+1).join('/') };
-      node = node[seg].children;
+      if (i === parts.length - 1) {
+        node[seg].items.push(w);
+      } else {
+        node = node[seg].children;
+      }
     }
-    // node now points to the leaf's children (which is wrong - we need to add to leaf's items)
-    // Re-find the leaf node properly
-    var leaf = tree;
-    for (var j = 0; j < parts.length; j++) {
-      leaf = leaf[parts[j]];
-    }
-    leaf.items.push(w);
   });
 
   var html = '<div class="select-all-bar"><label style="cursor:pointer"><input type="checkbox" id="cb-select-all" onchange="onSelectAllChange()"> 全选</label></div>';
