@@ -1160,7 +1160,8 @@ function startDictation() {
   var allSelected=selectedCols.indexOf('all')>-1||selectedCols.length===0;
   dictList = words.filter(function(w) {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
-    var colOk = allSelected || selectedCols.indexOf(w.collection||'未分类')>-1;
+    var coll = w.collection || '未分类';
+    var colOk = allSelected || selectedCols.some(function(sc) { return coll === sc || coll.startsWith(sc + '/'); });
     return typeOk && colOk;
   });
   if (dictList.length === 0) { alert('没有可默写的词语'); return; }
