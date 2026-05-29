@@ -679,7 +679,8 @@ function onCollectionCheck(clicked){
     if(allCb)allCb.checked=false;
   }
   var anyChecked=Array.from(document.querySelectorAll('#dict-collection-list input:checked')).length>0;
-  if(!anyChecked){var allCb=document.querySelector('#dict-collection-list input[value="all"]');if(allCb)allCb.checked=true;}
+  // Only auto-check "all" if nothing is selected AND user didn't just uncheck "all"
+  if(!anyChecked && val!=='all'){var allCb=document.querySelector('#dict-collection-list input[value="all"]');if(allCb)allCb.checked=true;}
 }
 
 function moveSelectedToCollection(){
