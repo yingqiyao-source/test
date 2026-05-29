@@ -812,7 +812,7 @@ function renderWordList() {
 
   // 2. Recursive render tree
   function renderNode(node, depth) {
-    var keys = Object.keys(node).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; }).sort();
+    var keys = (node.children ? Object.keys(node.children) : Object.keys(node)).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; }).sort();
     var out = '';
     keys.forEach(function(key) {
       var child = node[key];
