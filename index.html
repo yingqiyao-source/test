@@ -815,9 +815,9 @@ function renderWordList() {
     var keys = (node.children ? Object.keys(node.children) : Object.keys(node)).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; }).sort();
     var out = '';
     keys.forEach(function(key) {
-      var child = node[key];
-      var childKeys = Object.keys(child.children).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
-      var totalItems = child.items.length + childKeys.reduce(function(sum, ck) { return sum + countAllItems(child.children[ck]); }, 0);
+      var child = (node.children || node)[key];
+      var childKeys = Object.keys(child.children || {}).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
+      var totalItems = child.items.length + (child.children ? childKeys.reduce(function(sum, ck) { return sum + countAllItems(child.children[ck]); }, 0) : 0);
       if (totalItems === 0) return;
       var collPath = child._path;
       var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
@@ -832,10 +832,10 @@ function renderWordList() {
           '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
         '</div>' +
         '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
-          childKeys.map(function(ck) {
+          (child.children ? childKeys.map(function(ck) {
             child.children[ck]._path = collPath + '/' + ck;
             return renderNode(child.children[ck], depth + 1);
-          }).join('') +
+          }).join('') : '') +
           child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
         '</div>' +
       '</div>';
@@ -843,7 +843,7 @@ function renderWordList() {
     return out;
   }
   function countAllItems(node) {
-    var ck = Object.keys(node.children).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
+    var ck = Object.keys(node.children || {}).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
     return node.items.length + ck.reduce(function(s, k) { return s + countAllItems(node.children[k]); }, 0);
   }
 
