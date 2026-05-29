@@ -715,8 +715,40 @@ function updateCollectionList() {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
     if (typeOk) collections[w.collection || '未分类'] = true;
   });
-  var cols = Object.keys(collections).sort();
-  // 确保至少有 '未分类' 选项
+  // Build tree to show consistent hierarchy with word list page
+  var tree = {};
+  Object.keys(collections).forEach(function(col) {
+    var parts = col.split('/');
+    var node = tree;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (!node[p]) node[p] = { _path: parts.slice(0, i+1).join('/'), children: {}, leaf: i === parts.length - 1 };
+      node = node[p];
+    }
+    node.leaf = true;
+  });
+  // Flatten tree into ordered list (depth-first)
+  var cols = [];
+  function flatten(node, depth) {
+    var keys = Object.keys(node).filter(function(k) { return k !== '_path' && k !== 'children' && k !== 'leaf'; }).sort();
+    keys.forEach(function(k) {
+      var child = node[k];
+      if (child.leaf && Object.keys(child.children).length === 0) {
+        cols.push(child._path);
+      } else {
+        // Only add leaf paths that have actual words
+        if (collections[child._path]) cols.push(child._path);
+        flatten(child.children, depth + 1);
+      }
+    });
+  }
+  flatten(tree, 0);
+  // Also include any raw collection names not in tree
+  Object.keys(collections).forEach(function(col) {
+    if (cols.indexOf(col) < 0) cols.push(col);
+  });
+  cols.sort();
+  // Ensure at least '未分类'
   if (cols.length === 0 || !cols.includes('未分类')) {
     cols.unshift('未分类');
   }
@@ -728,7 +760,6 @@ function updateCollectionList() {
       return '<label class="coll-cb-label"><input type="checkbox" class="coll-cb" value="' + escapeHtml(c) + '" onchange="onCollectionCheck(this)"> ' + escapeHtml(c) + '</label>';
     }).join('');
   }
-  // Also populate the add-modal collection select
   var sel = document.getElementById('add-collection');
   if (sel) {
     sel.innerHTML = '<option value="">— 选择集合（可选）—</option>' + cols.map(function(c) {
