@@ -10,6 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+.coll-cb-label{display:flex;align-items:center;padding:2px 4px;border-radius:4px;cursor:pointer;font-size:14px}
+.coll-cb-label:hover{background:#f0f0f0}
 :root{--primary:#1565C0;--primary-light:#1E88E5;--accent:#FF6F00;--bg:#F5F5F5;--card:#fff;--text:#212121;--text2:#757575;--danger:#D32F2F;--success:#2E7D32;--radius:12px;--shadow:0 2px 8px rgba(0,0,0,.12)}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
 .header{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(21,101,192,.3)}
@@ -174,7 +176,7 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:13px;color:var(--text2)">集合（可多选）</label>
-        <div id="dict-collection-list" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto;padding:4px 0"></div>
+        <select id="dict-collection-list" multiple style="margin-top:4px;width:100%;height:120px;padding:4px;font-size:14px;border:1px solid #ddd;border-radius:6px"></select>
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:13px;color:var(--text2)">数量</label>
@@ -757,34 +759,22 @@ function updateCollectionList() {
     }).join('') + '<option value="__new__">+ 新建集合</option>';
   }
 
-  // ===== Tree-style checkboxes for dict settings page =====
-  var listDiv = document.getElementById('dict-collection-list');
-  if (listDiv) {
-    var html = '';
-    // Render tree with indentation and parent-child hierarchy
-    function renderCollTree(nodeObj, depth) {
+  // ===== Tree-style options for dict settings page (select multiple) =====
+  var listSel = document.getElementById('dict-collection-list');
+  if (listSel) {
+    function renderCollOptions(nodeObj, depth) {
       var keys = Object.keys(nodeObj).filter(function(k) { return k !== '_fullPath'; }).sort();
       var out = '';
       keys.forEach(function(key) {
         var child = nodeObj[key];
-        var fullPath = child._fullPath || key;
-        var indent = 'margin-left:' + (depth * 20) + 'px';
-        var icon = depth === 0 ? '📁 ' : '📂 ';
-        out += '<label class="coll-cb-label" style="' + indent + '">' +
-          '<input type="checkbox" class="coll-cb" value="' + escapeHtml(fullPath) + '" onchange="onCollectionCheck(this)"> ' +
-          icon + escapeHtml(key) +
-          '</label>';
-        // Recurse into children
-        renderCollTree(child.children || {}, depth + 1);
+        var prefix = depth > 0 ? '  └ ' : '📁 ';
+        out += '<option value="' + escapeHtml(child._fullPath || key) + '">' + prefix + escapeHtml(key) + '</option>';
+        out += renderCollOptions(child.children || {}, depth + 1);
       });
       return out;
     }
-    html += renderCollTree(tree, 0);
-    // Ungrouped
-    if (hasUngrouped) {
-      html += '<label class="coll-cb-label"><input type="checkbox" class="coll-cb" value="未分类" onchange="onCollectionCheck(this)"> 📋 未分类</label>';
-    }
-    listDiv.innerHTML = html;
+    listSel.innerHTML = '<option value="all">☐ 全部</option>' + renderCollOptions(tree, 0) +
+      (hasUngrouped ? '<option value="未分类">📋 未分类</option>' : '');
   }
 }
 function handleCollectionSelect(sel) {
@@ -1155,8 +1145,8 @@ let dictStartTime = 0;
 function startDictation() {
   var type = document.getElementById('dict-type').value;
   var count = parseInt(document.getElementById('dict-count').value);
-  var cols=document.querySelectorAll('#dict-collection-list input:checked');
-  var selectedCols=Array.from(cols).map(function(cb){return cb.value;});
+  var sel = document.getElementById('dict-collection-list');
+  var selectedCols = Array.from(sel.selectedOptions).map(function(opt) { return opt.value; });
   var allSelected=selectedCols.indexOf('all')>-1||selectedCols.length===0;
   dictList = words.filter(function(w) {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
