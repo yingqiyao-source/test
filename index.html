@@ -793,57 +793,36 @@ function renderWordList() {
     return;
   }
 
-  // 1. Build collection tree (paths split by / e.g. "grade3/unit1")
-  var tree = {};
+    // 1. Group by original collection name (consistent with dictation settings page)
+  var groups = {};
   var ungrouped = [];
   filtered.forEach(function(w) {
-    if (!w.collection) { ungrouped.push(w); return; }
-    var parts = w.collection.split('/');
-    var node = tree;
-    for (var i = 0; i < parts.length; i++) {
-      var p = parts[i];
-      if (!node[p]) node[p] = { children: {}, items: [], _path: parts.slice(0, i+1).join('/'), collapsed: collapsedCollections.has(parts.slice(0, i+1).join('/')) };
-      node = node[p];
-    }
-    node.items.push(w);
+    var col = w.collection || '';
+    if (!col) { ungrouped.push(w); return; }
+    if (!groups[col]) groups[col] = [];
+    groups[col].push(w);
   });
 
   var html = '<div class="select-all-bar"><label style="cursor:pointer"><input type="checkbox" id="cb-select-all" onchange="onSelectAllChange()"> 全选</label></div>';
 
-  // 2. Recursive render
-  function renderNode(node, depth) {
-    var keys = Object.keys(node).sort();
-    var out = '';
-    keys.forEach(function(key) {
-      var child = node[key];
-      var childKeys = Object.keys(child.children);
-      var totalItems = child.items.length + childKeys.length;
-      if (totalItems === 0) return;
-      var collPath = child._path;
-      var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
-      var collapsed = child.collapsed;
-      var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
-      var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
-      out += '<div class="collection-group" id="' + collId + '">' +
-        '<div class="collection-header" style="' + bgStyle + '" onclick="toggleCollection(\'' + escapeHtml(collPath) + '\')">' +
-          '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
-          '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(key) + '</span>' +
-          '<span class="coll-count">' + totalItems + '</span>' +
-          '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
-        '</div>' +
-        '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
-          childKeys.map(function(ck) {
-            child.children[ck]._path = collPath + '/' + ck;
-            return renderNode(child.children, depth + 1);
-          }).join('') +
-          child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
-        '</div>' +
-      '</div>';
-    });
-    return out;
-  }
-
-  html += renderNode(tree, 0);
+  // 2. Render each collection group (show original name with /, same as dictation page)
+  var collNames = Object.keys(groups).sort();
+  collNames.forEach(function(collPath) {
+    var items = groups[collPath];
+    var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
+    var collapsed = collapsedCollections.has(collPath);
+    html += '<div class="collection-group" id="' + collId + '">' +
+      '<div class="collection-header" style="background:#e8f0fe" onclick="toggleCollection(\'' + escapeHtml(collPath) + '\')">' +
+        '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
+        '<span class="coll-name" style="color:var(--primary)">📁 ' + escapeHtml(collPath) + '</span>' +
+        '<span class="coll-count">' + items.length + '</span>' +
+        '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
+      '</div>' +
+      '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
+        items.map(function(w) { return renderWordItem(w, 1); }).join('') +
+      '</div>' +
+    '</div>';
+  });
 
   // 3. Ungrouped
   if (ungrouped.length > 0) {
