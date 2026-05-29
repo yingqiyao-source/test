@@ -835,7 +835,6 @@ function renderWordList() {
         '</div>' +
         '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
           (child.children ? childKeys.map(function(ck) {
-            child.children[ck]._path = collPath + '/' + ck;
             return renderNode(child.children[ck], depth + 1);
           }).join('') : '') +
           child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
