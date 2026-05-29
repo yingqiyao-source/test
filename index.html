@@ -48,6 +48,10 @@ textarea{resize:vertical;min-height:80px}
 .collection-header .coll-count{font-size:12px;color:var(--text2);background:#e0e0e0;padding:2px 8px;border-radius:10px}
 .collection-header .coll-expand{font-size:12px;color:var(--primary)}
 .collection-body{padding-left:8px}
+.collection-parent{padding-left:0}
+.collection-parent > .collection-group > .collection-header{background:#e8f0fe}
+.collection-parent > .collection-group > .collection-header .coll-name{color:var(--primary)}
+.collection-parent > .collection-body > .collection-group > .collection-header{background:#f0f4ff}
 .word-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;transition:.2s}
 .word-item:last-child{border-bottom:none}
 .word-item.selected{background:#E3F2FD;border-radius:8px;margin:0 -8px;padding-left:8px;padding-right:8px}
@@ -712,40 +716,59 @@ function renderWordList() {
     return;
   }
 
-  // 按集合分组
-  var groups = {};
+  // 1. Build collection tree (paths split by / e.g. "grade3/unit1")
+  var tree = {};
   var ungrouped = [];
   filtered.forEach(function(w) {
-    var coll = w.collection || '';
-    if (coll) {
-      if (!groups[coll]) groups[coll] = [];
-      groups[coll].push(w);
-    } else {
-      ungrouped.push(w);
+    if (!w.collection) { ungrouped.push(w); return; }
+    var parts = w.collection.split('/');
+    var node = tree;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (!node[p]) node[p] = { children: {}, items: [], _path: parts.slice(0, i+1).join('/'), collapsed: collapsedCollections.has(parts.slice(0, i+1).join('/')) };
+      node = node[p];
     }
+    node.items.push(w);
   });
 
   var html = '<div class="select-all-bar"><label style="cursor:pointer"><input type="checkbox" id="cb-select-all" onchange="onSelectAllChange()"> 全选</label></div>';
 
-  // 渲染分组
-  Object.keys(groups).sort().forEach(function(coll) {
-    var items = groups[coll];
-    var collId = 'cg-' + coll.replace(/\s/g, '_');
-    var collapsed = collapsedCollections.has(coll);
-    html += '<div class="collection-group" id="' + collId + '">' +
-      '<div class="collection-header" onclick="toggleCollection(\'' + escapeHtml(coll) + '\')">' +
-        '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
-        '<span class="coll-name">📁 ' + escapeHtml(coll) + '</span>' +
-        '<span class="coll-count">' + items.length + '</span>' +
-        '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
-      '</div>' +
-      '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
-        items.map(function(w) { return renderWordItem(w); }).join('') +
-      '</div>' +
-    '</div>';
-  });
+  // 2. Recursive render
+  function renderNode(node, depth) {
+    var keys = Object.keys(node).sort();
+    var out = '';
+    keys.forEach(function(key) {
+      var child = node[key];
+      var childKeys = Object.keys(child.children);
+      var totalItems = child.items.length + childKeys.length;
+      if (totalItems === 0) return;
+      var collPath = child._path;
+      var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
+      var collapsed = child.collapsed;
+      var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
+      var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
+      out += '<div class="collection-group" id="' + collId + '">' +
+        '<div class="collection-header" style="' + bgStyle + '" onclick="toggleCollection(\'' + escapeHtml(collPath) + '')">' +
+          '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
+          '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(key) + '</span>' +
+          '<span class="coll-count">' + totalItems + '</span>' +
+          '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
+        '</div>' +
+        '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
+          childKeys.map(function(ck) {
+            child.children[ck]._path = collPath + '/' + ck;
+            return renderNode(child.children, depth + 1);
+          }).join('') +
+          child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
+        '</div>' +
+      '</div>';
+    });
+    return out;
+  }
 
-  // 渲染未分组
+  html += renderNode(tree, 0);
+
+  // 3. Ungrouped
   if (ungrouped.length > 0) {
     html += '<div class="collection-group">' +
       '<div class="collection-header" style="background:#fff3cd" onclick="toggleUngrouped(this)">' +
@@ -755,7 +778,7 @@ function renderWordList() {
         '<span class="coll-expand" id="ub-expand">收起</span>' +
       '</div>' +
       '<div class="collection-body" id="ub-body">' +
-        ungrouped.map(function(w) { return renderWordItem(w); }).join('') +
+        ungrouped.map(function(w) { return renderWordItem(w, 0); }).join('') +
       '</div>' +
     '</div>';
   }
@@ -766,9 +789,9 @@ function renderWordList() {
 }
 
 var collapsedCollections = new Set();
-
-function toggleCollection(coll) {
-  var el = document.getElementById('cg-' + coll.replace(/\s/g, '_'));
+function toggleCollection(collPath) {
+  var id = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
+  var el = document.getElementById(id);
   if (!el) return;
   var body = el.querySelector('.collection-body');
   var arrow = el.querySelector('.coll-arrow');
@@ -778,44 +801,37 @@ function toggleCollection(coll) {
     body.style.display = 'block';
     arrow.classList.add('open');
     expand.textContent = '收起';
-    collapsedCollections.delete(coll);
+    collapsedCollections.delete(collPath);
   } else {
     body.style.display = 'none';
     arrow.classList.remove('open');
     expand.textContent = '展开';
-    collapsedCollections.add(coll);
+    collapsedCollections.add(collPath);
   }
 }
-
 function toggleUngrouped(headerEl) {
   var body = headerEl.nextElementSibling;
   var arrow = headerEl.querySelector('.coll-arrow');
   var expand = headerEl.querySelector('.coll-expand');
   var collapsed = body.style.display === 'none';
-  if (collapsed) {
-    body.style.display = 'block';
-    arrow.classList.add('open');
-    expand.textContent = '收起';
-  } else {
-    body.style.display = 'none';
-    arrow.classList.remove('open');
-    expand.textContent = '展开';
-  }
+  if (collapsed) { body.style.display = 'block'; arrow.classList.add('open'); expand.textContent = '收起'; }
+  else { body.style.display = 'none'; arrow.classList.remove('open'); expand.textContent = '展开'; }
 }
-
-function renderWordItem(w) {
+function renderWordItem(w, depth) {
+  depth = depth || 0;
   var realIdx = words.indexOf(w);
-  var coll = w.collection || '';
   var typeStr = w.type === 'cn' ? '语文' : (w.type === 'en' ? '英语' : (w.type === 'en-sentence' ? '英语句子' : '课文默写'));
   var tagCls = w.type === 'cn' ? 'tag-cn' : (w.type === 'textbook' ? 'tag-textbook' : 'tag-en');
   var checked = selectedWordIndices.has(realIdx) ? 'checked' : '';
-  return '<div class="word-item ' + (checked ? 'selected' : '') + '" id="wi-' + realIdx + '">' +
+  var indentStyle = depth > 0 ? 'margin-left:' + (depth * 10) + 'px' : '';
+  return '<div class="word-item ' + (checked ? 'selected' : '') + '" id="wi-' + realIdx + '" style="' + indentStyle + '">' +
     '<input type="checkbox" class="word-cb" data-idx="' + realIdx + '" ' + checked + ' onchange="onWordCheck(this)">' +
     '<div class="word-info">' +
       '<div class="word-text">' + escapeHtml(w.type === 'textbook' ? (w.title || w.word) : w.word) + '</div>' +
       '<span class="tag ' + tagCls + '">' + typeStr + '</span>' +
       (w.type === 'en-sentence' ? '<span class="tag tag-en-sentence">句子</span>' : '') +
       (w.type === 'textbook' ? '<span class="tag tag-textbook" style="font-size:11px">课文</span>' : '') +
+      (w.collection && w.collection !== '未分类' ? '<span class="tag tag-collection" style="cursor:pointer" onclick="changeCollection(' + realIdx + ')">' + escapeHtml(w.collection) + '</span>' : '') +
     '</div>' +
     '<div class="actions">' +
       '<button class="icon-btn danger" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
