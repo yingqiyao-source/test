@@ -653,10 +653,28 @@ try { history = JSON.parse(localStorage.getItem('dictation_history') || '[]'); }
 
 
 function onCollectionCheck(clicked){
+  var val = clicked.value;
+  // Parent-child linkage: checking parent checks all children, unchecking parent unchecks all children
+  if (clicked.checked) {
+    // Check all children (paths starting with val/)
+    document.querySelectorAll('#dict-collection-list .col-chip-cb').forEach(function(cb) {
+      if (cb.value !== 'all' && cb.value !== val && (cb.value === val + '/' || cb.value.startsWith(val + '/'))) {
+        cb.checked = true;
+      }
+    });
+  } else {
+    // Uncheck all children
+    document.querySelectorAll('#dict-collection-list .col-chip-cb').forEach(function(cb) {
+      if (cb.value !== 'all' && cb.value !== val && (cb.value === val + '/' || cb.value.startsWith(val + '/'))) {
+        cb.checked = false;
+      }
+    });
+  }
+  // "All" mutual exclusion with others
   var cbs=document.querySelectorAll('#dict-collection-list input');
-  if(clicked.value==='all'&&clicked.checked){
+  if(val==='all'&&clicked.checked){
     cbs.forEach(function(cb){if(cb.value!=='all')cb.checked=false;});
-  }else if(clicked.value!=='all'&&clicked.checked){
+  }else if(val!=='all'&&clicked.checked){
     var allCb=document.querySelector('#dict-collection-list input[value="all"]');
     if(allCb)allCb.checked=false;
   }
