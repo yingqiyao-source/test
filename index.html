@@ -710,66 +710,83 @@ function switchPage(page) {
 function updateCollectionList() {
   var typeEl = document.getElementById('dict-type');
   var type = typeEl ? typeEl.value : 'all';
-  var collections = {};
+  // Build tree from words (same logic as renderWordList)
+  var tree = {};
+  var hasUngrouped = false;
   words.forEach(function(w) {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
-    if (typeOk) collections[w.collection || '未分类'] = true;
-  });
-  // Build tree to show consistent hierarchy with word list page
-  var tree = { children: {}, items: [] };
-  Object.keys(collections).forEach(function(col) {
-    var parts = col.split('/');
+    if (!typeOk) return;
+    var collPath = w.collection;
+    if (!collPath || !collPath.trim()) { hasUngrouped = true; return; }
+    var parts = collPath.split('/');
     var node = tree;
     for (var i = 0; i < parts.length; i++) {
-      var p = parts[i];
-      if (!node.children[p]) node.children[p] = { _path: parts.slice(0, i+1).join('/'), children: {}, leaf: i === parts.length - 1 };
-      node = node.children[p];
-    }
-    node.leaf = true;
-  });
-  // Flatten tree into ordered list (depth-first)
-  var cols = [];
-  function flatten(node, depth) {
-    var keys = Object.keys(node.children || node || {}).filter(function(k) { return k !== '_path' && k !== 'children' && k !== 'leaf' && k !== 'items' && k !== 'collapsed'; }).sort();
-    keys.forEach(function(k) {
-      var child = (node.children || node)[k];
-      if (!child) return;
-      var childChildren = child.children || {};
-      if (child.leaf && Object.keys(childChildren).length === 0) {
-        cols.push(child._path);
+      var seg = parts[i];
+      if (!node[seg]) node[seg] = { items: [], children: {}, _fullPath: parts.slice(0, i+1).join('/') };
+      if (i === parts.length - 1) {
+        node[seg].items.push(w);
       } else {
-        // Only add leaf paths that have actual words
-        if (collections[child._path]) cols.push(child._path);
-        flatten(child, depth + 1);
+        node = node[seg].children;
       }
+    }
+  });
+
+  // Flatten for select dropdowns (keep backward compat)
+  var flatCols = [];
+  function flattenForSelect(nodeObj, depth) {
+    var keys = Object.keys(nodeObj).filter(function(k) { return k !== '_fullPath'; }).sort();
+    keys.forEach(function(key) {
+      var child = nodeObj[key];
+      var prefix = depth > 0 ? '  '.repeat(depth) + '└ ' : '';
+      flatCols.push(child._fullPath);
+      flattenForSelect(child.children || {}, depth + 1);
     });
   }
-  flatten(tree, 0);
-  // Also include any raw collection names not in tree
-  Object.keys(collections).forEach(function(col) {
-    if (cols.indexOf(col) < 0) cols.push(col);
-  });
-  cols.sort();
-  // Ensure at least '未分类'
-  if (cols.length === 0 || !cols.includes('未分类')) {
-    cols.unshift('未分类');
-  }
+  flattenForSelect(tree, 0);
+  if (hasUngrouped && flatCols.indexOf('未分类') < 0) flatCols.unshift('未分类');
+
+  // Update select dropdown
   var dl = document.getElementById('collection-list');
-  if (dl) dl.innerHTML = cols.map(function(c) { return '<option value="' + escapeHtml(c) + '">'; }).join('');
-  var listDiv = document.getElementById('dict-collection-list');
-  if (listDiv) {
-    listDiv.innerHTML = cols.map(function(c) {
-      return '<label class="coll-cb-label"><input type="checkbox" class="coll-cb" value="' + escapeHtml(c) + '" onchange="onCollectionCheck(this)"> ' + escapeHtml(c) + '</label>';
-    }).join('');
-  }
+  if (dl) dl.innerHTML = '<option value="">全部</option>' + flatCols.map(function(c) { return '<option value="' + escapeHtml(c) + '">'; }).join('');
+
+  // Update add-collection select
   var sel = document.getElementById('add-collection');
   if (sel) {
-    sel.innerHTML = '<option value="">— 选择集合（可选）—</option>' + cols.map(function(c) {
+    sel.innerHTML = '<option value="">— 选择集合（可选）—</option>' + flatCols.map(function(c) {
       return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
     }).join('') + '<option value="__new__">+ 新建集合</option>';
   }
-}
 
+  // ===== Tree-style checkboxes for dict settings page =====
+  var listDiv = document.getElementById('dict-collection-list');
+  if (listDiv) {
+    var html = '';
+    // Render tree with indentation and parent-child hierarchy
+    function renderCollTree(nodeObj, depth) {
+      var keys = Object.keys(nodeObj).filter(function(k) { return k !== '_fullPath'; }).sort();
+      var out = '';
+      keys.forEach(function(key) {
+        var child = nodeObj[key];
+        var fullPath = child._fullPath || key;
+        var indent = 'margin-left:' + (depth * 20) + 'px';
+        var icon = depth === 0 ? '📁 ' : '📂 ';
+        out += '<label class="coll-cb-label" style="' + indent + '">' +
+          '<input type="checkbox" class="coll-cb" value="' + escapeHtml(fullPath) + '" onchange="onCollectionCheck(this)"> ' +
+          icon + escapeHtml(key) +
+          '</label>';
+        // Recurse into children
+        renderCollTree(child.children || {}, depth + 1);
+      });
+      return out;
+    }
+    html += renderCollTree(tree, 0);
+    // Ungrouped
+    if (hasUngrouped) {
+      html += '<label class="coll-cb-label"><input type="checkbox" class="coll-cb" value="未分类" onchange="onCollectionCheck(this)"> 📋 未分类</label>';
+    }
+    listDiv.innerHTML = html;
+  }
+}
 function handleCollectionSelect(sel) {
   if (sel.value === '__new__') {
     sel.value = ''; // reset to placeholder
