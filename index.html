@@ -813,7 +813,7 @@ function renderWordList() {
     var count = collectionPaths[collPath];
     var parts = collPath.split('/');
     var depth = parts.length - 1;
-    var name = parts[parts.length - 1];
+    var name = collPath;  // Show full path for clarity
     var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
     var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
     var indent = 'margin-left:' + (depth * 20) + 'px';
