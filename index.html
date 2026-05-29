@@ -39,6 +39,15 @@ textarea{resize:vertical;min-height:80px}
 .tag-en-sentence{background:#E8F5E9;color:#2E7D32}
 .tag-textbook{background:#FFF8E1;color:#F57C00}
 .tag-collection{background:#f3e8ff;color:#6b21a8;font-size:11px;margin-left:4px;}
+.collection-group{margin-bottom:8px}
+.collection-header{display:flex;align-items:center;padding:12px 8px;background:#f8f9fa;border-radius:12px;cursor:pointer;transition:.2s;user-select:none}
+.collection-header:active{background:#eee}
+.collection-header .coll-arrow{font-size:14px;color:var(--text2);margin-right:8px;transition:transform .2s}
+.collection-header .coll-arrow.open{transform:rotate(90deg)}
+.collection-header .coll-name{font-size:15px;font-weight:600;flex:1}
+.collection-header .coll-count{font-size:12px;color:var(--text2);background:#e0e0e0;padding:2px 8px;border-radius:10px}
+.collection-header .coll-expand{font-size:12px;color:var(--primary)}
+.collection-body{padding-left:8px}
 .word-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;transition:.2s}
 .word-item:last-child{border-bottom:none}
 .word-item.selected{background:#E3F2FD;border-radius:8px;margin:0 -8px;padding-left:8px;padding-right:8px}
@@ -702,30 +711,116 @@ function renderWordList() {
     list.innerHTML = '<div class="empty-state"><div class="emoji">📚</div><p>还没有词语哦<br>先去添加一些吧</p></div>';
     return;
   }
+
+  // 按集合分组
+  var groups = {};
+  var ungrouped = [];
+  filtered.forEach(function(w) {
+    var coll = w.collection || '';
+    if (coll) {
+      if (!groups[coll]) groups[coll] = [];
+      groups[coll].push(w);
+    } else {
+      ungrouped.push(w);
+    }
+  });
+
   var html = '<div class="select-all-bar"><label style="cursor:pointer"><input type="checkbox" id="cb-select-all" onchange="onSelectAllChange()"> 全选</label></div>';
-  html += filtered.map(function(w, i) {
-    var realIdx = words.indexOf(w);
-    var coll = w.collection || '未分类';
-    var typeStr = w.type === 'cn' ? '语文' : (w.type === 'en' ? '英语' : (w.type === 'en-sentence' ? '英语句子' : '课文默写'));
-    var tagCls = w.type === 'cn' ? 'tag-cn' : (w.type === 'textbook' ? 'tag-textbook' : 'tag-en');
-    var checked = selectedWordIndices.has(realIdx) ? 'checked' : '';
-    return '<div class="word-item ' + (checked ? 'selected' : '') + '" id="wi-' + realIdx + '">' +
-      '<input type="checkbox" class="word-cb" data-idx="' + realIdx + '" ' + checked + ' onchange="onWordCheck(this)">' +
-      '<div class="word-info">' +
-        '<div class="word-text">' + escapeHtml(w.type === 'textbook' ? (w.title || w.word) : w.word) + '</div>' +
-        '<span class="tag ' + tagCls + '">' + typeStr + '</span>' +
-        (w.type === 'en-sentence' ? '<span class="tag tag-en-sentence">句子</span>' : '') +
-        (w.type === 'textbook' ? '<span class="tag tag-textbook" style="font-size:11px">课文</span>' : '') +
-        (w.collection && w.collection !== '未分类' ? '<span class="tag tag-collection" style="cursor:pointer" onclick="changeCollection(' + realIdx + ')">' + escapeHtml(w.collection) + '</span>' : '') +
+
+  // 渲染分组
+  Object.keys(groups).sort().forEach(function(coll) {
+    var items = groups[coll];
+    var collId = 'cg-' + coll.replace(/\s/g, '_');
+    var collapsed = collapsedCollections.has(coll);
+    html += '<div class="collection-group" id="' + collId + '">' +
+      '<div class="collection-header" onclick="toggleCollection(\'' + escapeHtml(coll) + '\')">' +
+        '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
+        '<span class="coll-name">📁 ' + escapeHtml(coll) + '</span>' +
+        '<span class="coll-count">' + items.length + '</span>' +
+        '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
       '</div>' +
-      '<div class="actions">' +
-        '<button class="icon-btn danger" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
+      '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
+        items.map(function(w) { return renderWordItem(w); }).join('') +
       '</div>' +
     '</div>';
-  }).join('');
+  });
+
+  // 渲染未分组
+  if (ungrouped.length > 0) {
+    html += '<div class="collection-group">' +
+      '<div class="collection-header" style="background:#fff3cd" onclick="toggleUngrouped(this)">' +
+        '<span class="coll-arrow open" id="ub-arrow">▶</span>' +
+        '<span class="coll-name">📋 未分类</span>' +
+        '<span class="coll-count">' + ungrouped.length + '</span>' +
+        '<span class="coll-expand" id="ub-expand">收起</span>' +
+      '</div>' +
+      '<div class="collection-body" id="ub-body">' +
+        ungrouped.map(function(w) { return renderWordItem(w); }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
   list.innerHTML = html;
   updateBatchBar();
   updateCollectionList();
+}
+
+var collapsedCollections = new Set();
+
+function toggleCollection(coll) {
+  var el = document.getElementById('cg-' + coll.replace(/\s/g, '_'));
+  if (!el) return;
+  var body = el.querySelector('.collection-body');
+  var arrow = el.querySelector('.coll-arrow');
+  var expand = el.querySelector('.coll-expand');
+  var collapsed = body.style.display === 'none';
+  if (collapsed) {
+    body.style.display = 'block';
+    arrow.classList.add('open');
+    expand.textContent = '收起';
+    collapsedCollections.delete(coll);
+  } else {
+    body.style.display = 'none';
+    arrow.classList.remove('open');
+    expand.textContent = '展开';
+    collapsedCollections.add(coll);
+  }
+}
+
+function toggleUngrouped(headerEl) {
+  var body = headerEl.nextElementSibling;
+  var arrow = headerEl.querySelector('.coll-arrow');
+  var expand = headerEl.querySelector('.coll-expand');
+  var collapsed = body.style.display === 'none';
+  if (collapsed) {
+    body.style.display = 'block';
+    arrow.classList.add('open');
+    expand.textContent = '收起';
+  } else {
+    body.style.display = 'none';
+    arrow.classList.remove('open');
+    expand.textContent = '展开';
+  }
+}
+
+function renderWordItem(w) {
+  var realIdx = words.indexOf(w);
+  var coll = w.collection || '';
+  var typeStr = w.type === 'cn' ? '语文' : (w.type === 'en' ? '英语' : (w.type === 'en-sentence' ? '英语句子' : '课文默写'));
+  var tagCls = w.type === 'cn' ? 'tag-cn' : (w.type === 'textbook' ? 'tag-textbook' : 'tag-en');
+  var checked = selectedWordIndices.has(realIdx) ? 'checked' : '';
+  return '<div class="word-item ' + (checked ? 'selected' : '') + '" id="wi-' + realIdx + '">' +
+    '<input type="checkbox" class="word-cb" data-idx="' + realIdx + '" ' + checked + ' onchange="onWordCheck(this)">' +
+    '<div class="word-info">' +
+      '<div class="word-text">' + escapeHtml(w.type === 'textbook' ? (w.title || w.word) : w.word) + '</div>' +
+      '<span class="tag ' + tagCls + '">' + typeStr + '</span>' +
+      (w.type === 'en-sentence' ? '<span class="tag tag-en-sentence">句子</span>' : '') +
+      (w.type === 'textbook' ? '<span class="tag tag-textbook" style="font-size:11px">课文</span>' : '') +
+    '</div>' +
+    '<div class="actions">' +
+      '<button class="icon-btn danger" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
+    '</div>' +
+  '</div>';
 }
 
 function onSelectAllChange() {
