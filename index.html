@@ -795,48 +795,80 @@ function renderWordList() {
     return;
   }
 
-  // Simplified approach: flat list with indentation based on collection path depth
-  // 1. Collect all unique collection paths with their word counts
-  var collectionPaths = {};
+  // Build tree from collection paths split by /
+  var tree = {};  // simple object: key = segment, value = { items: [], children: {} }
+  var ungroupedItems = [];
   filtered.forEach(function(w) {
-    var path = w.collection || '未分类';
-    collectionPaths[path] = (collectionPaths[path] || 0) + 1;
+    var collPath = w.collection;
+    if (!collPath || !collPath.trim()) { ungroupedItems.push(w); return; }
+    var parts = collPath.split('/');
+    var node = tree;
+    for (var i = 0; i < parts.length; i++) {
+      var seg = parts[i];
+      if (!node[seg]) node[seg] = { items: [], children: {}, _fullPath: parts.slice(0, i+1).join('/') };
+      node = node[seg].children;
+    }
+    // node now points to the leaf's children (which is wrong - we need to add to leaf's items)
+    // Re-find the leaf node properly
+    var leaf = tree;
+    for (var j = 0; j < parts.length; j++) {
+      leaf = leaf[parts[j]];
+    }
+    leaf.items.push(w);
   });
 
-  // 2. Sort paths (handles '/' hierarchy naturally via string sort)
-  var sortedPaths = Object.keys(collectionPaths).sort();
-
-  // 3. Render HTML
   var html = '<div class="select-all-bar"><label style="cursor:pointer"><input type="checkbox" id="cb-select-all" onchange="onSelectAllChange()"> 全选</label></div>';
 
-  sortedPaths.forEach(function(collPath) {
-    var count = collectionPaths[collPath];
-    var parts = collPath.split('/');
-    var depth = parts.length - 1;
-    var name = collPath;  // Show full path for clarity
-    var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
-    var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
-    var indent = 'margin-left:' + (depth * 20) + 'px';
-    var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
-    var collapsed = collapsedCollections.has(collPath);
+  // Recursive render - pure function, no mutation
+  function renderLevel(nodeObj, depth) {
+    var keys = Object.keys(nodeObj).filter(function(k) { return k !== '_fullPath'; }).sort();
+    var out = '';
+    keys.forEach(function(key) {
+      var child = nodeObj[key];
+      var fullPath = child._fullPath || key;
+      var childKeys = Object.keys(child.children || {}).filter(function(k) { return k !== '_fullPath'; });
+      var totalItems = child.items.length + childKeys.reduce(function(s, k) { return s + countItems(child.children[k]); }, 0);
+      if (totalItems === 0) return;
+      var collId = 'cg-' + fullPath.replace(/\s/g, '_').replace(/\//g, '__');
+      var isCollapsed = collapsedCollections.has(fullPath);
+      var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
+      var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
+      var indent = depth > 0 ? 'margin-left:' + (depth * 20) + 'px' : '';
 
-    // Render collection header
-    html += '<div class="collection-group" id="' + collId + '">' +
-      '<div class="collection-header" style="' + bgStyle + ';' + indent + '" onclick="toggleCollection(\'' + escapeHtml(collPath) + '\')">' +
-        '<span class="coll-arrow ' + (collapsed ? '' : 'open') + '">▶</span>' +
-        '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(name) + '</span>' +
-        '<span class="coll-count">' + count + '</span>' +
-        '<span class="coll-expand">' + (collapsed ? '展开' : '收起') + '</span>' +
-      '</div>' +
-      '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">';
-
-    // Render words in this collection
-    filtered.filter(function(w) { return (w.collection || '未分类') === collPath; }).forEach(function(w) {
-      html += renderWordItem(w, depth + 1);
+      out += '<div class="collection-group" id="' + collId + '">' +
+        '<div class="collection-header" style="' + bgStyle + ';' + indent + '" onclick="toggleCollection(\'' + escapeHtml(fullPath) + '\')">' +
+          '<span class="coll-arrow ' + (isCollapsed ? '' : 'open') + '">▶</span>' +
+          '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(key) + '</span>' +
+          '<span class="coll-count">' + totalItems + '</span>' +
+          '<span class="coll-expand">' + (isCollapsed ? '展开' : '收起') + '</span>' +
+        '</div>' +
+        '<div class="collection-body" style="display:' + (isCollapsed ? 'none' : 'block') + '">' +
+          renderLevel(child.children || {}, depth + 1) +
+          child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
+        '</div></div>';
     });
+    return out;
+  }
 
-    html += '</div></div>';
-  });
+  function countItems(n) {
+    var ks = Object.keys(n || {}).filter(function(k) { return k !== '_fullPath'; });
+    return (n.items || []).length + ks.reduce(function(s, k) { return s + countItems((n || {})[k].children || {}); }, 0);
+  }
+
+  html += renderLevel(tree, 0);
+
+  if (ungroupedItems.length > 0) {
+    html += '<div class="collection-group">' +
+      '<div class="collection-header" style="background:#fff3cd" onclick="toggleUngrouped(this)">' +
+        '<span class="coll-arrow open" id="ub-arrow">▶</span>' +
+        '<span class="coll-name">📋 未分类</span>' +
+        '<span class="coll-count">' + ungroupedItems.length + '</span>' +
+        '<span class="coll-expand" id="ub-expand">收起</span>' +
+      '</div>' +
+      '<div class="collection-body" id="ub-body">' +
+        ungroupedItems.map(function(w) { return renderWordItem(w, 1); }).join('') +
+      '</div></div>';
+  }
 
   list.innerHTML = html;
   updateCollectionList(wordFilter);
