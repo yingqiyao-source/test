@@ -852,6 +852,20 @@ function renderWordList() {
   console.log('Collection tree:', JSON.stringify(tree, function(k, v) { if(k==='items') return v.length; return v; }, 2));
   console.log('Ungrouped:', ungrouped.length);
   console.log('filtered count:', filtered.length);
+  // DEBUG: show all collection values to diagnose tree issue
+  var collValues = {};
+  filtered.forEach(function(w) {
+    if (w.collection) collValues[w.collection] = (collValues[w.collection] || 0) + 1;
+  });
+  console.log('All collections in data:', JSON.stringify(collValues, null, 2));
+  // DEBUG: check if 三年级 node has children
+  if (tree.children['三年级']) {
+    console.log('三年级 keys:', Object.keys(tree.children['三年级'].children || {}));
+    console.log('三年级 items:', tree.children['三年级'].items.length);
+    console.log('三年级 _path:', tree.children['三年级']._path);
+  } else {
+    console.log('WARNING: no 三年级 in tree root!');
+  }
   if (ungrouped.length > 0) {
     html += '<div class="collection-group">' +
       '<div class="collection-header" style="background:#fff3cd" onclick="toggleUngrouped(this)">' +
