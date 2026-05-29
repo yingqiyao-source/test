@@ -848,6 +848,10 @@ function renderWordList() {
   }
 
   html += renderNode(tree, 0);// 3. Ungrouped
+  // DEBUG: log tree structure
+  console.log('Collection tree:', JSON.stringify(tree, function(k, v) { if(k==='items') return v.length; return v; }, 2));
+  console.log('Ungrouped:', ungrouped.length);
+  console.log('filtered count:', filtered.length);
   if (ungrouped.length > 0) {
     html += '<div class="collection-group">' +
       '<div class="collection-header" style="background:#fff3cd" onclick="toggleUngrouped(this)">' +
