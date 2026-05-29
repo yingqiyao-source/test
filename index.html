@@ -722,23 +722,25 @@ function updateCollectionList() {
     var node = tree;
     for (var i = 0; i < parts.length; i++) {
       var p = parts[i];
-      if (!node[p]) node[p] = { _path: parts.slice(0, i+1).join('/'), children: {}, leaf: i === parts.length - 1 };
-      node = node[p];
+      if (!node.children[p]) node.children[p] = { _path: parts.slice(0, i+1).join('/'), children: {}, leaf: i === parts.length - 1 };
+      node = node.children[p];
     }
     node.leaf = true;
   });
   // Flatten tree into ordered list (depth-first)
   var cols = [];
   function flatten(node, depth) {
-    var keys = Object.keys(node).filter(function(k) { return k !== '_path' && k !== 'children' && k !== 'leaf'; }).sort();
+    var keys = Object.keys(node.children || node || {}).filter(function(k) { return k !== '_path' && k !== 'children' && k !== 'leaf' && k !== 'items' && k !== 'collapsed'; }).sort();
     keys.forEach(function(k) {
-      var child = node[k];
-      if (child.leaf && Object.keys(child.children).length === 0) {
+      var child = (node.children || node)[k];
+      if (!child) return;
+      var childChildren = child.children || {};
+      if (child.leaf && Object.keys(childChildren).length === 0) {
         cols.push(child._path);
       } else {
         // Only add leaf paths that have actual words
         if (collections[child._path]) cols.push(child._path);
-        flatten(child.children, depth + 1);
+        flatten(child, depth + 1);
       }
     });
   }
