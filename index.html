@@ -817,7 +817,7 @@ function renderWordList() {
     keys.forEach(function(key) {
       var child = node[key];
       var childKeys = Object.keys(child.children).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
-      var totalItems = child.items.length + childKeys.reduce(function(sum, ck) { return sum + countAllItems(child.children[ck]); }, 0);
+      var totalItems = child.items.length + childKeys.reduce(function(sum, ck) { return sum + countAllItems(child[ck]); }, 0);
       if (totalItems === 0) return;
       var collPath = child._path;
       var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
@@ -833,8 +833,8 @@ function renderWordList() {
         '</div>' +
         '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
           childKeys.map(function(ck) {
-            child.children[ck]._path = collPath + '/' + ck;
-            return renderNode(child.children, depth + 1);
+            child[ck]._path = collPath + '/' + ck;
+            return renderNode(child[ck], depth + 1);
           }).join('') +
           child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
         '</div>' +
