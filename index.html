@@ -670,11 +670,11 @@ function onCollectionCheck(clicked){
       }
     });
   }
-  // "All" mutual exclusion with others
+  // "All" behavior: checking all checks everything, unchecking all unchecks everything
   var cbs=document.querySelectorAll('#dict-collection-list input');
-  if(val==='all'&&clicked.checked){
-    cbs.forEach(function(cb){if(cb.value!=='all')cb.checked=false;});
-  }else if(val!=='all'&&clicked.checked){
+  if(val==='all'){
+    cbs.forEach(function(cb){if(cb.value!=='all')cb.checked=clicked.checked;});
+  }else if(clicked.checked){
     var allCb=document.querySelector('#dict-collection-list input[value="all"]');
     if(allCb)allCb.checked=false;
   }
