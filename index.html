@@ -794,7 +794,7 @@ function renderWordList() {
   }
 
       // 1. Build collection tree (paths split by / for multi-level folders)
-  var tree = {};
+  var tree = { children: {}, items: [] };
   var ungrouped = [];
   filtered.forEach(function(w) {
     if (!w.collection) { ungrouped.push(w); return; }
