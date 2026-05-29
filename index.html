@@ -716,7 +716,7 @@ function updateCollectionList() {
     if (typeOk) collections[w.collection || '未分类'] = true;
   });
   // Build tree to show consistent hierarchy with word list page
-  var tree = {};
+  var tree = { children: {}, items: [] };
   Object.keys(collections).forEach(function(col) {
     var parts = col.split('/');
     var node = tree;
@@ -802,8 +802,8 @@ function renderWordList() {
     var node = tree;
     for (var i = 0; i < parts.length; i++) {
       var p = parts[i];
-      if (!node[p]) node[p] = { children: {}, items: [], _path: parts.slice(0, i+1).join('/'), collapsed: collapsedCollections.has(parts.slice(0, i+1).join('/')) };
-      node = node[p];
+      if (!node.children[p]) node.children[p] = { children: {}, items: [], _path: parts.slice(0, i+1).join('/'), collapsed: collapsedCollections.has(parts.slice(0, i+1).join('/')) };
+      node = node.children[p];
     }
     node.items.push(w);
   });
@@ -817,7 +817,7 @@ function renderWordList() {
     keys.forEach(function(key) {
       var child = node[key];
       var childKeys = Object.keys(child.children).filter(function(k) { return k !== 'children' && k !== 'items' && k !== '_path' && k !== 'collapsed'; });
-      var totalItems = child.items.length + childKeys.reduce(function(sum, ck) { return sum + countAllItems(child[ck]); }, 0);
+      var totalItems = child.items.length + childKeys.reduce(function(sum, ck) { return sum + countAllItems(child.children[ck]); }, 0);
       if (totalItems === 0) return;
       var collPath = child._path;
       var collId = 'cg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
@@ -833,8 +833,8 @@ function renderWordList() {
         '</div>' +
         '<div class="collection-body" style="display:' + (collapsed ? 'none' : 'block') + '">' +
           childKeys.map(function(ck) {
-            child[ck]._path = collPath + '/' + ck;
-            return renderNode(child[ck], depth + 1);
+            child.children[ck]._path = collPath + '/' + ck;
+            return renderNode(child.children[ck], depth + 1);
           }).join('') +
           child.items.map(function(w) { return renderWordItem(w, depth + 1); }).join('') +
         '</div>' +
