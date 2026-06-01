@@ -283,7 +283,7 @@ textarea{resize:vertical;min-height:80px}
 <div class="hw-overlay" id="hw-overlay">
   <div class="hw-box">
     <h3>手写答案</h3>
-    <button class="hw-btn hw-btn-outline" onclick="speak(dictList[dictIdx].word)" style="margin-bottom:8px">🔊 重新朗读</button>
+    <button id="hw-speak-btn" class="hw-btn hw-btn-outline" onclick="speak(dictList[dictIdx].word)" style="margin-bottom:8px">🔊 重新朗读</button>
     <div class="hw-canvas-wrap" id="hw-canvas-wrap"></div>
     <div class="hw-actions">
       <button class="hw-btn hw-btn-outline" onclick="hwClear()">清除</button>
@@ -1332,6 +1332,9 @@ function hwOpen() {
   var item = dictList[dictIdx];
   var word = item.word;
   var isLong = word.length > 6 || item.type === 'en-sentence';
+  // 课文默写：隐藏"重新朗读"按钮
+  var speakBtn = document.getElementById('hw-speak-btn');
+  if (speakBtn) speakBtn.style.display = (item.type === 'textbook') ? 'none' : '';
   var wrap = document.getElementById('hw-canvas-wrap');
   wrap.innerHTML = '';
   hwCanvases = [];
