@@ -783,29 +783,83 @@ function updateCollectionList() {
     }).join('') + '<option value="__new__">+ 新建集合</option>';
   }
 
-  // ===== Clickable tag chips for dict settings page (mobile-friendly) =====
+  // ===== Tree-style collection selector for dict settings page =====
   var listDiv = document.getElementById('dict-collection-list');
   if (listDiv) {
-    function renderCollChips(nodeObj, depth) {
+    function renderDictCollTree(nodeObj, depth) {
       var keys = Object.keys(nodeObj).filter(function(k) { return k !== '_fullPath'; }).sort();
       var out = '';
       keys.forEach(function(key) {
         var child = nodeObj[key];
         var fullPath = child._fullPath || key;
-        var indent = depth > 0 ? 'padding-left:' + (depth * 20) + 'px;' : '';
-        var prefix = depth === 0 ? '📁 ' : '└ ';
-        out += '<label class="col-chip" style="' + indent + '" data-val="' + escapeHtml(fullPath) + '">' +
-          '<input type="checkbox" class="col-chip-cb" value="' + escapeHtml(fullPath) + '" onchange="onCollectionCheck(this)"> ' +
-          prefix + escapeHtml(key) + '</label>';
-        out += renderCollChips(child.children || {}, depth + 1);
+        var childKeys = Object.keys(child.children || {}).filter(function(k) { return k !== '_fullPath'; });
+        var hasChildren = childKeys.length > 0;
+        var collId = 'dcg-' + fullPath.replace(/\s/g, '_').replace(/\//g, '__');
+        var isCollapsed = dictCollapsedCollections.has(fullPath);
+        var bgStyle = depth === 0 ? 'background:#e8f0fe' : (depth === 1 ? 'background:#f0f4ff' : 'background:#f8f9fa');
+        var nameStyle = depth === 0 ? 'color:var(--primary)' : '';
+        var indent = depth > 0 ? 'margin-left:' + (depth * 20) + 'px' : '';
+        var folderIcon = depth === 0 ? '📁 ' : '📂 ';
+
+        out += '<div class="collection-group" id="' + collId + '" style="margin-bottom:4px;">' +
+          '<div class="collection-header" style="' + bgStyle + ';' + indent + ';padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="if(event.target.type!=='checkbox'){toggleDictCollection(\'' + escapeHtml(fullPath) + '\');}">' +
+            (hasChildren ? '<span class="coll-arrow ' + (isCollapsed ? '' : 'open') + '" style="font-size:12px;color:var(--text2);transition:transform .2s;">▶</span>' : '<span style="width:12px;"></span>') +
+            '<input type="checkbox" class="col-chip-cb" value="' + escapeHtml(fullPath) + '" onchange="onCollectionCheck(this);event.stopPropagation();" style="margin:0;">' +
+            '<span class="coll-name" style="' + nameStyle + ';flex:1;font-size:14px;">' + folderIcon + escapeHtml(key) + '</span>' +
+            (hasChildren ? '<span class="coll-expand" style="font-size:12px;color:var(--primary);">' + (isCollapsed ? '展开' : '收起') + '</span>' : '') +
+          '</div>' +
+          (hasChildren ? '<div class="collection-body" style="display:' + (isCollapsed ? 'none' : 'block') + ';padding-top:4px;">' +
+            renderDictCollTree(child.children || {}, depth + 1) +
+          '</div>' : '') +
+        '</div>';
       });
       return out;
     }
-    listDiv.innerHTML = '<label class="col-chip col-special" data-val="all"><input type="checkbox" class="col-chip-cb" value="all" onchange="onCollectionCheck(this)"> ☐ 全部</label>' +
-      renderCollChips(tree, 0) +
-      (hasUngrouped ? '<label class="col-chip col-special" data-val="未分类"><input type="checkbox" class="col-chip-cb" value="未分类" onchange="onCollectionCheck(this)"> 📋 未分类</label>' : '');
+
+    var html = '<div class="select-all-bar" style="padding:8px 0;margin-bottom:8px;">' +
+      '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;">' +
+        '<input type="checkbox" class="col-chip-cb" value="all" onchange="onCollectionCheck(this)"> ' +
+        '<span style="font-weight:600;">☐ 全部</span>' +
+      '</label>' +
+    '</div>';
+    html += renderDictCollTree(tree, 0);
+    if (hasUngrouped) {
+      html += '<div class="collection-group" style="margin-bottom:4px;margin-top:8px;">' +
+        '<div class="collection-header" style="background:#fff3cd;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:8px;">' +
+          '<span style="width:12px;"></span>' +
+          '<input type="checkbox" class="col-chip-cb" value="未分类" onchange="onCollectionCheck(this)" style="margin:0;">' +
+          '<span class="coll-name" style="flex:1;font-size:14px;">📋 未分类</span>' +
+        '</div>' +
+      '</div>';
+    }
+    listDiv.innerHTML = html;
   }
 }
+
+// Tree collapse state for dict settings page
+var dictCollapsedCollections = new Set();
+function toggleDictCollection(collPath) {
+  var id = 'dcg-' + collPath.replace(/\s/g, '_').replace(/\//g, '__');
+  var el = document.getElementById(id);
+  if (!el) return;
+  var body = el.querySelector('.collection-body');
+  var arrow = el.querySelector('.coll-arrow');
+  var expand = el.querySelector('.coll-expand');
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  if (collapsed) {
+    body.style.display = 'block';
+    if (arrow) arrow.classList.add('open');
+    if (expand) expand.textContent = '收起';
+    dictCollapsedCollections.delete(collPath);
+  } else {
+    body.style.display = 'none';
+    if (arrow) arrow.classList.remove('open');
+    if (expand) expand.textContent = '展开';
+    dictCollapsedCollections.add(collPath);
+  }
+}
+
 function handleCollectionSelect(sel) {
   if (sel.value === '__new__') {
     sel.value = ''; // reset to placeholder
