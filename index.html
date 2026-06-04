@@ -162,6 +162,11 @@ textarea{resize:vertical;min-height:80px}
     <button class="btn btn-primary" style="flex:1" onclick="showAddModal('manual')">+ 添加词语</button>
     <button class="btn btn-accent" style="flex:1" onclick="showAddModal('photo')">📷 拍照添加</button>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-outline btn-sm" style="flex:1" onclick="exportWords()">📤 导出数据</button>
+    <button class="btn btn-outline btn-sm" style="flex:1" onclick="document.getElementById('import-file-input').click()">📥 导入数据</button>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importWords(event)">
+  </div>
   <div id="word-list" style="padding-bottom:70px"></div>
 </div>
 
@@ -1802,6 +1807,50 @@ function changeCollection(idx) {
     updateCollectionList();
     showToast("已移动到 "+escapeHtml(w.collection));
   }
-}</script>
+}
+
+// ===== Import / Export =====
+function exportWords(){
+  try{
+    var data = localStorage.getItem('dictation_words') || '[]';
+    var blob = new Blob([data], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '默写助手_词库_' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    showToast('词库已导出');
+  }catch(e){ alert('导出失败：'+e.message); }
+}
+
+function importWords(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var imported = JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error('格式错误：不是有效的词库文件');
+      var existing = JSON.parse(localStorage.getItem('dictation_words') || '[]');
+      var keys = new Set(existing.map(function(w){ return (w.word||'')+'|'+(w.collection||'') }));
+      var added = 0;
+      imported.forEach(function(w){
+        if(!w.word) return;
+        var k = (w.word||'')+'|'+(w.collection||'');
+        if(!keys.has(k)){ existing.push(w); keys.add(k); added++; }
+      });
+      localStorage.setItem('dictation_words', JSON.stringify(existing));
+      renderWordList();
+      updateStats();
+      updateCollectionList();
+      showToast('导入成功！新增 '+added+' 条词语');
+    }catch(err){ alert('导入失败：'+err.message); }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+</script>
 </body>
 </html>
