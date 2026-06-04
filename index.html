@@ -268,6 +268,12 @@ textarea{resize:vertical;min-height:80px}
     <h3 style="margin-bottom:12px">最近成绩</h3>
     <div id="recent-scores"></div>
   </div>
+  <div class="card" style="text-align:center">
+    <h3 style="margin-bottom:8px">📱 关于</h3>
+    <p style="font-size:18px;font-weight:600;color:var(--primary)">默写助手</p>
+    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version">版本 1.0.0</p>
+    <p style="font-size:12px;color:var(--text2);margin-top:6px">帮助孩子高效练习默写的工具</p>
+  </div>
   <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px">清除所有数据</button>
 </div>
 
@@ -317,6 +323,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
+const APP_VERSION = '1.0.1';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -1694,6 +1701,7 @@ function renderStats() {
   document.getElementById('stat-cn').textContent = words.filter(function(w) { return w.type === 'cn' || w.type === 'textbook'; }).length;
   document.getElementById('stat-en').textContent = words.filter(function(w) { return w.type === 'en' || w.type === 'en-sentence'; }).length;
   document.getElementById('stat-practice').textContent = history.length;
+  document.getElementById('about-version').textContent = '版本 ' + APP_VERSION;
   var rs = document.getElementById('recent-scores');
   if (history.length === 0) {
     rs.innerHTML = '<div class="empty-state"><p>还没有成绩记录</p></div>';
