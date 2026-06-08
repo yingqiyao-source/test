@@ -533,7 +533,8 @@ function showCpItem() {
   var item = cpList[cpIdx].item;
   var word = item.word;
   var isEn = item.type === 'en' || item.type === 'en-sentence';
-  var isEnSentence = item.type === 'en-sentence';
+  var isEnSentence = item.type === 'en-sentence' && word.split(/\s+/).length <= 5;
+  var isLongSentence = item.type === 'en-sentence' && word.split(/\s+/).length > 5;
   var isTextbook = item.type === 'textbook';
   var units;
   if (isEn) { units = word.split(/\s+/); }
@@ -555,22 +556,22 @@ function showCpItem() {
       cellWidths[j] = 80;
     }
   }
-  var cellHeight = (isEn || isEnSentence) ? 80 : (isTextbook ? 200 : 120);
+  var cellHeight = (isEn && !isLongSentence) ? 80 : (isTextbook || isLongSentence ? 200 : 120);
   for (var i = 0; i < COPY_COUNT; i++) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:6px;align-items:stretch;margin-bottom:8px;flex-wrap:' + (isTextbook ? 'nowrap' : 'nowrap');
+    row.style.cssText = 'display:flex;gap:6px;align-items:stretch;margin-bottom:8px;flex-wrap:' + (isTextbook || isLongSentence ? 'wrap' : 'nowrap');
     var rowLabel = document.createElement('div');
     rowLabel.style.cssText = 'writing-mode:vertical-rl;font-size:12px;color:#bbb;min-width:18px;text-align:center;display:flex;align-items:center;justify-content:center;height:' + cellHeight + 'px';
     rowLabel.textContent = '第' + (i+1) + '遍';
     row.appendChild(rowLabel);
     for (var j = 0; j < units.length; j++) {
       var cell = document.createElement('div');
-      var cellW = isTextbook ? '100%' : (cellWidths[j] + 'px');
+      var cellW = (isTextbook || isLongSentence) ? '100%' : (cellWidths[j] + 'px');
       cell.style.cssText = 'border:2px dashed #ddd;border-radius:8px;position:relative;overflow:hidden;flex:0 0 auto;width:' + cellW + ';height:' + cellHeight + 'px';
       if (i === 0) {
         var hint = document.createElement('div');
         var hintFontSize = isEnSentence ? '20px' : (isEn ? '24px' : (isTextbook ? '18px' : '36px'));
-        hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:' + hintFontSize + ';color:rgba(0,0,0,.08);pointer-events:none;user-select:none;white-space:' + (isTextbook ? 'normal' : 'nowrap') + ';text-align:center;padding:8px;line-height:1.6';
+        hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:' + hintFontSize + ';color:rgba(0,0,0,.08);pointer-events:none;user-select:none;white-space:' + (isTextbook || isLongSentence ? 'normal' : 'nowrap') + ';text-align:center;padding:8px;line-height:1.6';
         hint.textContent = units[j];
         cell.appendChild(hint);
       }
