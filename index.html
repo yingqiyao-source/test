@@ -501,7 +501,6 @@ function wpSubmit() { wpIdx++; showWpItem(); }
 function wpRetry() {
   var item = wpList[wpIdx].item;
   speak(item.word);
-  if (wpCtx) { wpCtx.fillStyle='#fafafa'; wpCtx.fillRect(0,0,wpCanvas.width,wpCanvas.height); }
 }
 
 function wpBack() {
