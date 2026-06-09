@@ -323,7 +323,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -537,8 +537,8 @@ function showCpItem() {
   var isLongSentence = item.type === 'en-sentence' && word.split(/\s+/).length > 5;
   var isTextbook = item.type === 'textbook';
   var units;
-  if (isEn) { units = word.split(/\s+/); }
-  else if (isTextbook) { units = [word]; } // 课文默写：整段作为一个格子
+  if (isEn && !isLongSentence) { units = word.split(/\s+/); }
+  else if (isEn || isTextbook) { units = [word]; } // 课文默写：整段作为一个格子
   else { units = word.split(''); }
   document.getElementById('cp-counter').textContent = (cpIdx+1) + '/' + cpList.length;
   document.getElementById('cp-word').textContent = isTextbook ? (item.title || word) : word;
