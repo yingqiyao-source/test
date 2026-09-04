@@ -1878,15 +1878,19 @@ function importWords(event){
     try{
       var imported = JSON.parse(e.target.result);
       if(!Array.isArray(imported)) throw new Error('格式错误：不是有效的词库文件');
-      var existing = JSON.parse(localStorage.getItem('dictation_words') || '[]');
+      // 直接操作内存中的 words：此前只写 localStorage，而渲染函数读的是全局 words，
+      // 导致导入成功后界面不刷新，必须手动刷新页面才能看到新词。
+      var existing = words;
       var keys = new Set(existing.map(function(w){ return (w.word||'')+'|'+(w.collection||'') }));
       var added = 0;
       imported.forEach(function(w){
         if(!w.word) return;
+        // 兼容旧词库：老版本导出的“未分类”是占位值，导入时还原为真正的无集合
+        if (w.collection === '未分类') w.collection = '';
         var k = (w.word||'')+'|'+(w.collection||'');
         if(!keys.has(k)){ existing.push(w); keys.add(k); added++; }
       });
-      localStorage.setItem('dictation_words', JSON.stringify(existing));
+      saveData();
       renderWordList();
       updateStats();
       updateCollectionList();
