@@ -1355,18 +1355,48 @@ function playCurrentAudio() {
 
 
 
+// ---- 语音朗读：缓存 voices 并优选高质量语音，解决读音不清晰 ----
+var _cachedVoices = [];
+function _loadVoices() {
+  try { _cachedVoices = window.speechSynthesis.getVoices() || []; } catch (e) { _cachedVoices = []; }
+}
+if (typeof window.speechSynthesis !== 'undefined') {
+  _loadVoices();
+  window.speechSynthesis.onvoiceschanged = _loadVoices;
+}
+function _pickVoice(lang) {
+  if (typeof window.speechSynthesis === 'undefined') return null;
+  if (!_cachedVoices.length) _loadVoices();
+  var base = (lang || '').toLowerCase().split('-')[0];
+  var sameLang = _cachedVoices.filter(function (v) {
+    return v.lang && v.lang.toLowerCase().split('-')[0] === base;
+  });
+  if (!sameLang.length) return null;
+  var pref = [/neural/i, /natural/i, /online/i, /premium/i,
+              /xiaoxiao/i, /yunxi/i, /yunyang/i, /aria/i, /zira/i,
+              /microsoft/i, /google/i, /apple/i, /huihui/i];
+  for (var i = 0; i < pref.length; i++) {
+    var hit = sameLang.filter(function (v) { return pref[i].test(v.name); });
+    if (hit.length) return hit[0];
+  }
+  return sameLang[0];
+}
+
 function speak(text) {
-  if (!text) return;
+  if (!text || typeof window.speechSynthesis === 'undefined') return;
   window.speechSynthesis.cancel();
   var isEnglish = /^[a-zA-Z\s\d\.,!?'"()-]+$/.test(text);
   var lang = isEnglish ? 'en-US' : 'zh-CN';
-  var rate = isEnglish ? 0.8 : 1.0;
+  var rate = isEnglish ? 0.9 : 1.0;
   var utter = new SpeechSynthesisUtterance(text);
   utter.lang = lang;
   utter.rate = rate;
+  utter.pitch = 1.0;
+  utter.volume = 1.0;
+  var v = _pickVoice(lang);
+  if (v) utter.voice = v;
   window.speechSynthesis.speak(utter);
 }
-
 
 
 function updateSpeakButtons() {
