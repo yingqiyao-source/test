@@ -1,13 +1,20 @@
 {
-  "name": "dictation-app",
-  "version": "1.0.1",
-  "description": "",
-  "main": "sw.js",
+  "name": "dictation-assistant",
+  "version": "1.0.3",
+  "description": "面向中小学的语文+英语默写练习工具（单文件网页应用，支持语音朗读、手写板、OCR 批改、错题订正）",
+  "main": "index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "dictation",
+    "默写",
+    "语文",
+    "英语",
+    "中小学生",
+    "pwa"
+  ],
+  "author": "yingqiyao",
   "license": "ISC",
   "dependencies": {
     "@capacitor/android": "^8.3.4",
