@@ -1373,7 +1373,8 @@ function _pickVoice(lang) {
   });
   if (!sameLang.length) return null;
   var pref = [/neural/i, /natural/i, /online/i, /premium/i,
-              /xiaoxiao/i, /yunxi/i, /yunyang/i, /aria/i, /zira/i,
+              /xiaoxiao/i, /yunxi/i, /yunyang/i, /yaoyao/i, /kangkang/i,
+              /aria/i, /zira/i, /david/i, /mark/i, /samantha/i,
               /microsoft/i, /google/i, /apple/i, /huihui/i];
   for (var i = 0; i < pref.length; i++) {
     var hit = sameLang.filter(function (v) { return pref[i].test(v.name); });
@@ -1382,20 +1383,36 @@ function _pickVoice(lang) {
   return sameLang[0];
 }
 
+// 按语言分句：中文段用中文语音，英文/数字段用英文语音，避免“中文腔读英文”
+function _isCJK(ch) {
+  return /[\u3000-\u303F\u4E00-\u9FFF\uFF00-\uFFEF]/.test(ch);
+}
+function _splitByLang(text) {
+  var runs = [], buf = '', cur = null;
+  for (var i = 0; i < text.length; i++) {
+    var cjk = _isCJK(text[i]);
+    if (cur === null) { buf = text[i]; cur = cjk; }
+    else if (cjk === cur) { buf += text[i]; }
+    else { runs.push({ text: buf, cjk: cur }); buf = text[i]; cur = cjk; }
+  }
+  if (buf) runs.push({ text: buf, cjk: cur });
+  return runs;
+}
 function speak(text) {
   if (!text || typeof window.speechSynthesis === 'undefined') return;
   window.speechSynthesis.cancel();
-  var isEnglish = /^[a-zA-Z\s\d\.,!?'"()-]+$/.test(text);
-  var lang = isEnglish ? 'en-US' : 'zh-CN';
-  var rate = isEnglish ? 0.9 : 1.0;
-  var utter = new SpeechSynthesisUtterance(text);
-  utter.lang = lang;
-  utter.rate = rate;
-  utter.pitch = 1.0;
-  utter.volume = 1.0;
-  var v = _pickVoice(lang);
-  if (v) utter.voice = v;
-  window.speechSynthesis.speak(utter);
+  _splitByLang(text).forEach(function (run) {
+    var lang = run.cjk ? 'zh-CN' : 'en-US';
+    var rate = run.cjk ? 0.9 : 0.8;  // 英文放慢，便于听写跟读
+    var utter = new SpeechSynthesisUtterance(run.text);
+    utter.lang = lang;
+    utter.rate = rate;
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+    var v = _pickVoice(lang);
+    if (v) utter.voice = v;
+    window.speechSynthesis.speak(utter);
+  });
 }
 
 
