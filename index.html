@@ -359,7 +359,7 @@ function updateBatchBar() {
   var sel = document.getElementById('batch-move-collection');
   if (sel) {
     var collections = {};
-    words.forEach(function(w) { collections[w.collection || '未分类'] = true; });
+    words.forEach(function(w) { if (w.collection) collections[w.collection] = true; });
     var cols = Object.keys(collections).sort();
     var cur = sel.value;
     sel.innerHTML = '<option value="">移动到...</option>' + cols.map(function(c) {
@@ -389,7 +389,7 @@ function onBatchCollChange(sel) {
     saveData();
     sel.value = '';
     sel.innerHTML = '<option value="">移动到...</option>' +
-      Object.keys(words.reduce(function(s, w) { s[w.collection||'未分类']=true; return s; }, {})).sort().map(function(c) {
+      Object.keys(words.reduce(function(s, w) { if (w.collection) s[w.collection]=true; return s; }, {})).sort().map(function(c) {
         return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
       }).join('') + '<option value="__new__">+ 新建集合</option>';
     sel.value = name;
@@ -407,7 +407,7 @@ function onBatchCollChange(sel) {
   saveData();
   sel.value = '';
   sel.innerHTML = '<option value="">移动到...</option>' +
-    Object.keys(words.reduce(function(s, w) { s[w.collection||'未分类']=true; return s; }, {})).sort().map(function(c) {
+    Object.keys(words.reduce(function(s, w) { if (w.collection) s[w.collection]=true; return s; }, {})).sort().map(function(c) {
       return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
     }).join('') + '<option value="__new__">+ 新建集合</option>';
   selectedWordIndices.clear();
@@ -662,6 +662,9 @@ let words = [];
 let history = [];
 try { words = JSON.parse(localStorage.getItem('dictation_words') || '[]'); } catch(e) {}
 try { history = JSON.parse(localStorage.getItem('dictation_history') || '[]'); } catch(e) {}
+// 兼容旧数据：早期版本把"未指定集合"的词写成了字符串"未分类"。
+// 现在"未分类"仅作为词语列表里的显示分组，不再是真实集合值，故还原为空。
+words.forEach(function(w) { if (w.collection === '未分类') w.collection = ''; });
 
 
 function onCollectionCheck(clicked){
@@ -725,18 +728,9 @@ function updateCollectionList() {
   var collections = {};
   words.forEach(function(w) {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
-    if (typeOk) collections[w.collection || '未分类'] = true;
+    if (typeOk && w.collection) collections[w.collection] = true;
   });
   var cols = Object.keys(collections).sort();
-  // Only add '未分类' if there are actually uncategorized words for this type
-  if (cols.indexOf('未分类') < 0) {
-    var hasUncategorized = words.some(function(w) {
-      var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
-      return typeOk && (!w.collection || w.collection === '未分类');
-    });
-    if (hasUncategorized) cols.unshift('未分类');
-  }
-  if (cols.length === 0) cols.unshift('未分类');
 
   // Update select dropdowns
   var dl = document.getElementById('collection-list');
@@ -754,10 +748,6 @@ function updateCollectionList() {
     // Build tree from paths
     var tree = {};
     cols.forEach(function(c) {
-      if (c === '未分类') {
-        tree['未分类'] = { name: '未分类', children: {}, level: 0 };
-        return;
-      }
       var parts = c.split('/');
       var node = tree;
       for (var i = 0; i < parts.length; i++) {
@@ -1040,7 +1030,7 @@ function renderWordItem(w, depth) {
       '<span class="tag ' + tagCls + '">' + typeStr + '</span>' +
       (w.type === 'en-sentence' ? '<span class="tag tag-en-sentence">句子</span>' : '') +
       (w.type === 'textbook' ? '<span class="tag tag-textbook" style="font-size:11px">课文</span>' : '') +
-      (w.collection && w.collection !== '未分类' ? '<span class="tag tag-collection" style="cursor:pointer" onclick="changeCollection(' + realIdx + ')">' + escapeHtml(w.collection) + '</span>' : '') +
+      (w.collection ? '<span class="tag tag-collection" style="cursor:pointer" onclick="changeCollection(' + realIdx + ')">' + escapeHtml(w.collection) + '</span>' : '') +
     '</div>' +
     '<div class="actions">' +
       '<button class="icon-btn danger" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
@@ -1223,18 +1213,18 @@ function saveWord() {
       if (type === 'textbook' && trimmed.indexOf('|') > -1) {
         // 兼容旧格式：标题|内容
         var parts = trimmed.split('|');
-        words.push({ word: parts[1].trim(), title: parts[0].trim() || defaultTitle, type: type, collection: collection || '未分类' });
+        words.push({ word: parts[1].trim(), title: parts[0].trim() || defaultTitle, type: type, collection: collection });
       } else if (type === 'textbook') {
-        words.push({ word: trimmed, title: defaultTitle || '未命名', type: type, collection: collection || '未分类' });
+        words.push({ word: trimmed, title: defaultTitle || '未命名', type: type, collection: collection });
       } else {
-        words.push({ word: trimmed, type: type, collection: collection || '未分类' });
+        words.push({ word: trimmed, type: type, collection: collection });
       }
     });
   } else if (w) {
     if (type === 'textbook') {
-      words.push({ word: w, title: w, type: type, collection: collection || '未分类' });
+      words.push({ word: w, title: w, type: type, collection: collection });
     } else {
-      words.push({ word: w, type: type, collection: collection || '未分类' });
+      words.push({ word: w, type: type, collection: collection });
     }
   }
   // 课文默写：额外保存整篇课文内容（换行不拆分）
@@ -1246,7 +1236,7 @@ function saveWord() {
         last.word = tbContent.trim();
       } else {
         // 只有课文内容没有标题时，添加一条
-        words.push({ word: tbContent.trim(), title: '未命名', type: 'textbook', collection: collection || '未分类' });
+        words.push({ word: tbContent.trim(), title: '未命名', type: 'textbook', collection: collection });
       }
     }
   }
@@ -1274,7 +1264,7 @@ function startDictation() {
   var allSelected = selectedCols.indexOf('all') > -1 || selectedCols.length === 0;
   dictList = words.filter(function(w) {
     var typeOk = type === 'all' || w.type === type || (type === 'en' && (w.type === 'en' || w.type === 'en-sentence')) || (type === 'cn' && w.type === 'textbook');
-    var coll = w.collection || '未分类';
+    var coll = w.collection || '';
     var colOk = allSelected || selectedCols.some(function(sc) { return coll === sc || coll.startsWith(sc + '/'); });
     return typeOk && colOk;
   });
@@ -1303,7 +1293,7 @@ function showDictItem() {
   // 课文默写：隐藏答案，只显示标题
   if (item.type === 'textbook') {
     var hasTitle = item.title && item.title !== item.word && item.title.trim() !== '';
-    var hasColl = item.collection && item.collection !== '未分类';
+    var hasColl = !!(item.collection && item.collection.trim());
     var displayTitle;
     if (hasTitle) {
       displayTitle = '📝 ' + item.title;
@@ -1828,7 +1818,7 @@ function importOCRResult() {
   var collection = document.getElementById('add-collection').value.trim();
   text.split(/[\n\r]+/).forEach(function(line) {
     var w = line.trim();
-    if (w) words.push({ word: w, type: type, collection: collection || '未分类' });
+    if (w) words.push({ word: w, type: type, collection: collection });
   });
   saveData();
   closeAddModal();
@@ -1853,10 +1843,10 @@ updateCollectionList();
 function changeCollection(idx) {
   var w=words[idx];
   if(!w){alert("词语不存在");return;}
-  var newCol=prompt("修改集合名称（当前："+(w.collection||"未分类")+"）",w.collection||"未分类");
+  var newCol=prompt("修改集合名称（当前："+(w.collection||"无")+"）",w.collection||"");
   if(newCol!==null){
     newCol=newCol.trim();
-    w.collection=newCol||"未分类";
+    w.collection=newCol;
     saveData();
     renderWordList();
     updateCollectionList();
