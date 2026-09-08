@@ -297,7 +297,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="card" style="text-align:center" >
     <h3 style="margin-bottom:8px" >📱 关于</h3>
     <p style="font-size:18px;font-weight:600;color:var(--primary)" >默写助手</p>
-    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.9</p>
+    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.10</p>
     <p style="font-size:12px;color:var(--text2);margin-top:6px" >帮助孩子高效练习默写的工具</p>
   </div>
   <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px" >清除所有数据</button>
@@ -349,7 +349,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.0.10';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -936,14 +936,18 @@ function openCollEdit(title, currentPath, callback) {
     parent = currentPath.substring(0, idx);
     name = currentPath.substring(idx + 1);
   } else { name = currentPath || ''; }
-  // 若解析出的上级不在现有集合中，则当作"新建上级"处理
-  if (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) {
-    // 暂以"新建上级"呈现，回填路径到新建输入框
+  // 解析出的上级：在列表里则直接选中；非空但不在列表里（如编辑已有多级集合的父级）当作"新建上级"回填；空则顶层
+  var parentInList = !!(parent && parent !== '__new_parent__' && findOptionByValue(parentSel, parent));
+  var npInput = document.getElementById('coll-edit-newparent');
+  var npWrap = document.getElementById('coll-edit-newparent-wrap');
+  if (parentInList) {
+    parentSel.value = parent; npInput.value = ''; npWrap.style.display = 'none';
+  } else if (parent) {
+    parentSel.value = '__new_parent__'; npInput.value = parent; npWrap.style.display = 'block';
+  } else {
+    parentSel.value = ''; npInput.value = ''; npWrap.style.display = 'none';
   }
-  parentSel.value = parent;
   document.getElementById('coll-edit-name').value = name;
-  document.getElementById('coll-edit-newparent').value = (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) ? parent : '';
-  document.getElementById('coll-edit-newparent-wrap').style.display = (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) ? 'block' : 'none';
   updateCollEditPreview();
   document.getElementById('coll-edit-overlay').classList.add('show');
   setTimeout(function(){ var n = document.getElementById('coll-edit-name'); if (n) n.focus(); }, 50);
