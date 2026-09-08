@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" >
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1565C0">
+<meta charset="UTF-8" >
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no" >
+<meta name="apple-mobile-web-app-capable" content="yes" >
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" >
+<meta name="theme-color" content="#1565C0" >
 <title>默写助手</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json" >
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 .coll-cb-label{display:flex;align-items:center;padding:4px 6px;border-radius:8px;cursor:pointer;font-size:14px}
@@ -172,184 +172,184 @@ textarea{resize:vertical;min-height:80px}
 </head>
 <body>
 
-<div class="header">
+<div class="header" >
   <h1>默写助手</h1>
   <p>语文词语 & 英语单词，轻松默写</p>
 </div>
 
 <!-- Page: Word List -->
-<div id="page-words" class="page active">
-  <div class="tabs">
-    <div class="tab active" data-filter="all">全部</div>
-    <div class="tab" data-filter="cn">语文</div>
-    <div class="tab" data-filter="en">英语</div>
+<div id="page-words" class="page active" >
+  <div class="tabs" >
+    <div class="tab active" data-filter="all" >全部</div>
+    <div class="tab" data-filter="cn" >语文</div>
+    <div class="tab" data-filter="en" >英语</div>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="btn btn-primary" style="flex:1" onclick="showAddModal('manual')">+ 添加词语</button>
-    <button class="btn btn-accent" style="flex:1" onclick="showAddModal('photo')">📷 拍照添加</button>
+  <div style="display:flex;gap:8px;margin-bottom:12px" >
+    <button class="btn btn-primary" style="flex:1" onclick="showAddModal('manual')" >+ 添加词语</button>
+    <button class="btn btn-accent" style="flex:1" onclick="showAddModal('photo')" >📷 拍照添加</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="btn btn-outline btn-sm" style="flex:1" onclick="exportWords()">📤 导出数据</button>
-    <button class="btn btn-outline btn-sm" style="flex:1" onclick="document.getElementById('import-file-input').click()">📥 导入数据</button>
-    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importWords(event)">
+  <div style="display:flex;gap:8px;margin-bottom:12px" >
+    <button class="btn btn-outline btn-sm" style="flex:1" onclick="exportWords()" >📤 导出数据</button>
+    <button class="btn btn-outline btn-sm" style="flex:1" onclick="document.getElementById('import-file-input').click()" >📥 导入数据</button>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importWords(event)" >
   </div>
-  <div id="word-list" style="padding-bottom:70px"></div>
+  <div id="word-list" style="padding-bottom:70px" ></div>
 </div>
 
 <!-- Page: Dictation -->
-<div id="page-dictation" class="page">
-  <div id="dictation-setup">
-    <div class="card">
-      <h3 style="margin-bottom:12px">默写设置</h3>
-      <div style="margin-bottom:12px">
-        <label style="font-size:13px;color:var(--text2)">类型</label>
-        <select id="dict-type" style="margin-top:4px" onchange="updateCollectionList()">
-          <option value="all">全部</option>
-          <option value="cn">语文</option>
-          <option value="en">英语</option>
+<div id="page-dictation" class="page" >
+  <div id="dictation-setup" >
+    <div class="card" >
+      <h3 style="margin-bottom:12px" >默写设置</h3>
+      <div style="margin-bottom:12px" >
+        <label style="font-size:13px;color:var(--text2)" >类型</label>
+        <select id="dict-type" style="margin-top:4px" onchange="updateCollectionList()" >
+          <option value="all" >全部</option>
+          <option value="cn" >语文</option>
+          <option value="en" >英语</option>
         </select>
       </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:13px;color:var(--text2)">集合（可多选）</label>
-        <div id="dict-collection-list" style="margin-top:8px;max-height:300px;overflow-y:auto;padding:4px 0;width:100%;box-sizing:border-box;"></div>
-        <div style="margin-top:6px;font-size:12px;color:#888">💡 点击标签可选中/取消 | <a href="#" onclick="selAllCollections();return false" style="color:var(--primary)">全选</a> | <a href="#" onclick="clearAllCollections();return false" style="color:var(--primary)">清空</a></div>
+      <div style="margin-bottom:12px" >
+        <label style="font-size:13px;color:var(--text2)" >集合（可多选）</label>
+        <div id="dict-collection-list" style="margin-top:8px;max-height:300px;overflow-y:auto;padding:4px 0;width:100%;box-sizing:border-box;" ></div>
+        <div style="margin-top:6px;font-size:12px;color:#888" >💡 点击标签可选中/取消 | <a href="#" onclick="selAllCollections();return false" style="color:var(--primary)" >全选</a> | <a href="#" onclick="clearAllCollections();return false" style="color:var(--primary)" >清空</a></div>
       </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:13px;color:var(--text2)">数量</label>
-        <select id="dict-count" style="margin-top:4px">
-          <option value="0">全部</option>
-          <option value="5">5个</option>
-          <option value="10">10个</option>
-          <option value="20">20个</option>
+      <div style="margin-bottom:12px" >
+        <label style="font-size:13px;color:var(--text2)" >数量</label>
+        <select id="dict-count" style="margin-top:4px" >
+          <option value="0" >全部</option>
+          <option value="5" >5个</option>
+          <option value="10" >10个</option>
+          <option value="20" >20个</option>
         </select>
       </div>
-      <button class="btn btn-primary btn-block" onclick="startDictation()">开始默写</button>
+      <button class="btn btn-primary btn-block" onclick="startDictation()" >开始默写</button>
     </div>
   </div>
-  <div id="dictation-play" style="display:none">
-    <div class="card dictation-card">
-      <div class="progress-bar"><div id="dict-progress" class="fill" style="width:0"></div></div>
-      <div style="font-size:13px;color:var(--text2)" id="dict-counter">1/10</div>
-      <div class="prompt" id="dict-prompt">--</div>
-      <div class="hint" id="dict-hint"></div>
+  <div id="dictation-play" style="display:none" >
+    <div class="card dictation-card" >
+      <div class="progress-bar" ><div id="dict-progress" class="fill" style="width:0" ></div></div>
+      <div style="font-size:13px;color:var(--text2)" id="dict-counter" >1/10</div>
+      <div class="prompt" id="dict-prompt" >--</div>
+      <div class="hint" id="dict-hint" ></div>
       <textarea id="dict-input" placeholder="输入你的答案..." autocomplete="off" rows="1" oninput="autoGrowInput()"></textarea>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="playCurrentAudio()">朗读</button>
-        <button class="btn btn-primary" onclick="submitAnswer()">确定</button>
-        <button class="btn btn-outline btn-sm" onclick="skipWord()">跳过</button>
-        <button class="btn btn-accent btn-sm" onclick="hwOpen()">手写</button>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap" >
+        <button class="btn btn-outline btn-sm" onclick="playCurrentAudio()" >朗读</button>
+        <button class="btn btn-primary" onclick="submitAnswer()" >确定</button>
+        <button class="btn btn-outline btn-sm" onclick="skipWord()" >跳过</button>
+        <button class="btn btn-accent btn-sm" onclick="hwOpen()" >手写</button>
       </div>
     </div>
   </div>
-  <div id="dictation-result" style="display:none">
-    <div class="card result-card">
-      <div class="score" id="result-score">0%</div>
-      <p style="color:var(--text2);margin-top:8px" id="result-text">继续加油！</p>
+  <div id="dictation-result" style="display:none" >
+    <div class="card result-card" >
+      <div class="score" id="result-score" >0%</div>
+      <p style="color:var(--text2);margin-top:8px" id="result-text" >继续加油！</p>
     </div>
-    <div class="card">
-      <h3 style="margin-bottom:12px">详细结果</h3>
-      <div id="result-review"></div>
+    <div class="card" >
+      <h3 style="margin-bottom:12px" >详细结果</h3>
+      <div id="result-review" ></div>
     </div>
-    <div class="result-btns" style="margin-top:12px">
-      <button class="btn btn-primary" onclick="startWrongPractice()">📝 订正错题</button>
-      <button class="btn btn-accent" onclick="startCopyPractice()">✍️ 抄写练习</button>
+    <div class="result-btns" style="margin-top:12px" >
+      <button class="btn btn-primary" onclick="startWrongPractice()" >📝 订正错题</button>
+      <button class="btn btn-accent" onclick="startCopyPractice()" >✍️ 抄写练习</button>
     </div>
-    <button class="btn btn-outline btn-block" onclick="resetDictation()" style="margin-top:12px">返回</button>
+    <button class="btn btn-outline btn-block" onclick="resetDictation()" style="margin-top:12px" >返回</button>
   </div>
-  <div id="page-review" style="display:none">
-    <div class="card" style="text-align:center">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:8px" id="review-counter">1/3</div>
-      <div style="font-weight:600;font-size:15px;margin-bottom:12px">请核对这道题</div>
-      <div style="background:#fafafa;border-radius:8px;padding:8px;margin-bottom:12px">
-        <div style="font-size:12px;color:var(--text2)">你的手写</div>
-        <img id="review-hw-img" style="max-width:100%;border-radius:6px;margin-top:6px;background:#fafafa">
+  <div id="page-review" style="display:none" >
+    <div class="card" style="text-align:center" >
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px" id="review-counter" >1/3</div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:12px" >请核对这道题</div>
+      <div style="background:#fafafa;border-radius:8px;padding:8px;margin-bottom:12px" >
+        <div style="font-size:12px;color:var(--text2)" >你的手写</div>
+        <img id="review-hw-img" style="max-width:100%;border-radius:6px;margin-top:6px;background:#fafafa" >
       </div>
-      <div id="review-ocr-box" style="background:#f0f7ff;border-radius:8px;padding:10px;margin-bottom:12px;display:none">
-        <div style="font-size:12px;color:var(--text2)">🤖 自动识别结果</div>
-        <div id="review-ocr-text" style="font-size:18px;font-weight:600;margin-top:4px"></div>
-        <div id="review-ocr-judge" style="font-size:14px;margin-top:4px"></div>
+      <div id="review-ocr-box" style="background:#f0f7ff;border-radius:8px;padding:10px;margin-bottom:12px;display:none" >
+        <div style="font-size:12px;color:var(--text2)" >🤖 自动识别结果</div>
+        <div id="review-ocr-text" style="font-size:18px;font-weight:600;margin-top:4px" ></div>
+        <div id="review-ocr-judge" style="font-size:14px;margin-top:4px" ></div>
       </div>
-      <div style="font-size:13px;color:var(--text2)">正确答案：</div>
-      <div id="review-correct" style="font-size:20px;font-weight:700;color:var(--primary);margin:8px 0 16px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto"></div>
-      <div style="display:flex;gap:12px;justify-content:center">
-        <button class="btn btn-primary" style="font-size:18px;padding:12px 32px" onclick="reviewJudge(true)">对了</button>
-        <button class="btn btn-danger" style="font-size:18px;padding:12px 32px" onclick="reviewJudge(false)">错了</button>
+      <div style="font-size:13px;color:var(--text2)" >正确答案：</div>
+      <div id="review-correct" style="font-size:20px;font-weight:700;color:var(--primary);margin:8px 0 16px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto" ></div>
+      <div style="display:flex;gap:12px;justify-content:center" >
+        <button class="btn btn-primary" style="font-size:18px;padding:12px 32px" onclick="reviewJudge(true)" >对了</button>
+        <button class="btn btn-danger" style="font-size:18px;padding:12px 32px" onclick="reviewJudge(false)" >错了</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Page: Stats -->
-<div id="page-stats" class="page">
-  <div class="card">
-    <h3 style="margin-bottom:12px">统计</h3>
-    <div class="stats-grid">
-      <div class="stat-item"><div class="num" id="stat-total">0</div><div class="label">总词语数</div></div>
-      <div class="stat-item"><div class="num" id="stat-cn">0</div><div class="label">语文</div></div>
-      <div class="stat-item"><div class="num" id="stat-en">0</div><div class="label">英语</div></div>
-      <div class="stat-item"><div class="num" id="stat-practice">0</div><div class="label">练习次数</div></div>
+<div id="page-stats" class="page" >
+  <div class="card" >
+    <h3 style="margin-bottom:12px" >统计</h3>
+    <div class="stats-grid" >
+      <div class="stat-item" ><div class="num" id="stat-total" >0</div><div class="label" >总词语数</div></div>
+      <div class="stat-item" ><div class="num" id="stat-cn" >0</div><div class="label" >语文</div></div>
+      <div class="stat-item" ><div class="num" id="stat-en" >0</div><div class="label" >英语</div></div>
+      <div class="stat-item" ><div class="num" id="stat-practice" >0</div><div class="label" >练习次数</div></div>
     </div>
   </div>
-  <div class="card">
-    <h3 style="margin-bottom:12px">最近成绩</h3>
-    <div id="recent-scores"></div>
+  <div class="card" >
+    <h3 style="margin-bottom:12px" >最近成绩</h3>
+    <div id="recent-scores" ></div>
   </div>
-  <div class="card" style="text-align:center">
-    <h3 style="margin-bottom:8px">📱 关于</h3>
-    <p style="font-size:18px;font-weight:600;color:var(--primary)">默写助手</p>
-    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version">版本 1.0.6</p>
-    <p style="font-size:12px;color:var(--text2);margin-top:6px">帮助孩子高效练习默写的工具</p>
+  <div class="card" style="text-align:center" >
+    <h3 style="margin-bottom:8px" >📱 关于</h3>
+    <p style="font-size:18px;font-weight:600;color:var(--primary)" >默写助手</p>
+    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.7</p>
+    <p style="font-size:12px;color:var(--text2);margin-top:6px" >帮助孩子高效练习默写的工具</p>
   </div>
-  <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px">清除所有数据</button>
+  <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px" >清除所有数据</button>
 </div>
 
 <!-- Batch Delete Bar -->
-<div class="batch-bar" id="batch-bar">
-  <div class="info">已选 <span id="batch-count">0</span> 个</div>
-  <div class="actions">
-    <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">全选/取消</button>
-    <button class="btn btn-danger btn-sm" onclick="deleteSelectedWords()">删除选中</button>
-    <select id="batch-move-collection" onchange="onBatchCollChange(this)" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;margin-left:4px">
-      <option value="">移动到...</option>
+<div class="batch-bar" id="batch-bar" >
+  <div class="info" >已选 <span id="batch-count" >0</span> 个</div>
+  <div class="actions" >
+    <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()" >全选/取消</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteSelectedWords()" >删除选中</button>
+    <select id="batch-move-collection" onchange="onBatchCollChange(this)" style="font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;margin-left:4px" >
+      <option value="" >移动到...</option>
     </select>
-    <button class="btn btn-outline btn-sm" onclick="moveSelectedToCollection()" style="margin-left:2px">移动</button>
+    <button class="btn btn-outline btn-sm" onclick="moveSelectedToCollection()" style="margin-left:2px" >移动</button>
   </div>
 </div>
 
 <!-- Handwriting Overlay -->
-<div class="hw-overlay" id="hw-overlay">
-  <div class="hw-box">
+<div class="hw-overlay" id="hw-overlay" >
+  <div class="hw-box" >
     <h3>手写答案</h3>
-    <button id="hw-speak-btn" class="hw-btn hw-btn-outline" onclick="speak(dictList[dictIdx].word)" style="margin-bottom:8px">🔊 重新朗读</button>
-    <div class="hw-canvas-wrap" id="hw-canvas-wrap"></div>
-    <div class="hw-actions">
-      <button class="hw-btn hw-btn-outline" onclick="hwClear()">清除</button>
-      <button class="hw-btn hw-btn-outline" id="hw-eraser-btn" onclick="toggleEraser()">橡皮</button>
-      <button class="hw-btn hw-btn-primary" onclick="hwSubmit()">提交并下一题</button>
-      <button class="hw-btn hw-btn-outline" onclick="hwClose()">取消</button>
+    <button id="hw-speak-btn" class="hw-btn hw-btn-outline" onclick="speak(dictList[dictIdx].word)" style="margin-bottom:8px" >🔊 重新朗读</button>
+    <div class="hw-canvas-wrap" id="hw-canvas-wrap" ></div>
+    <div class="hw-actions" >
+      <button class="hw-btn hw-btn-outline" onclick="hwClear()" >清除</button>
+      <button class="hw-btn hw-btn-outline" id="hw-eraser-btn" onclick="toggleEraser()" >橡皮</button>
+      <button class="hw-btn hw-btn-primary" onclick="hwSubmit()" >提交并下一题</button>
+      <button class="hw-btn hw-btn-outline" onclick="hwClose()" >取消</button>
     </div>
   </div>
 </div>
 
 <!-- Bottom Nav -->
-<div class="bottom-nav">
-  <div class="nav-item active" data-page="words" onclick="switchPage('words')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+<div class="bottom-nav" >
+  <div class="nav-item active" data-page="words" onclick="switchPage('words')" >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
     <span>词语本</span>
   </div>
-  <div class="nav-item" data-page="dictation" onclick="switchPage('dictation')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+  <div class="nav-item" data-page="dictation" onclick="switchPage('dictation')" >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
     <span>默写</span>
   </div>
-  <div class="nav-item" data-page="stats" onclick="switchPage('stats')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+  <div class="nav-item" data-page="stats" onclick="switchPage('stats')" >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></svg>
     <span>统计</span>
   </div>
 </div>
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -397,31 +397,19 @@ function updateBatchBar() {
 function onBatchCollChange(sel) {
   if (sel.value === '__new__') {
     sel.value = '';
-    var name = prompt('请输入新集合名称（支持多级，如：三年级/第一单元）：');
-    if (!name || !name.trim()) return;
-    name = name.trim();
-    if (selectedWordIndices.size === 0) return;
-    var oldCur = sel.getAttribute('data-last-value') || '';
-    if (oldCur && cols.indexOf(oldCur) === -1) {
-      var opt = document.createElement('option');
-      opt.value = oldCur; opt.textContent = oldCur;
-      sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
-    }
-    sel.setAttribute('data-last-value', name);
-    // Apply the move
-    selectedWordIndices.forEach(function(idx) {
-      if (words[idx]) words[idx].collection = name;
-    });
-    saveData();
-    sel.value = '';
-    sel.innerHTML = '<option value="">移动到...</option>' +
-      Object.keys(words.reduce(function(s, w) { if (w.collection) s[w.collection]=true; return s; }, {})).sort().map(function(c) {
+    if (selectedWordIndices.size === 0) { updateBatchBar(); return; }
+    openCollEdit('移动到新集合', '', function(finalPath) {
+      selectedWordIndices.forEach(function(i){ if (words[i]) words[i].collection = finalPath; });
+      saveData();
+      sel.value = '';
+      sel.innerHTML = '<option value="">移动到...</option>' + getAllCollections().map(function(c) {
         return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
       }).join('') + '<option value="__new__">+ 新建集合</option>';
-    sel.value = name;
-    selectedWordIndices.clear();
-    updateBatchBar();
-    renderWordList();
+      sel.value = finalPath;
+      selectedWordIndices.clear();
+      updateBatchBar();
+      renderWordList();
+    });
     return;
   }
   sel.setAttribute('data-last-value', sel.value);
@@ -893,18 +881,86 @@ function toggleDictCollection(collPath) {
 function handleCollectionSelect(sel) {
   if (sel.value === '__new__') {
     sel.value = ''; // reset to placeholder
-    var name = prompt('请输入新集合名称：');
-    if (name && name.trim()) {
-      name = name.trim();
-      // Add as new option and select it
-      var opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      opt.selected = true;
-      sel.appendChild(opt);
-    }
+    openCollEdit('新建集合', '', function(finalPath) {
+      if (!finalPath) return;
+      var opt = findOptionByValue(sel, finalPath);
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = finalPath; opt.textContent = finalPath;
+        sel.appendChild(opt);
+      }
+      sel.value = finalPath;
+    });
   }
 }
+// ===== Collection Editor (replaces slash-typing with a parent dropdown) =====
+var collEditCallback = null;
+function createCollEditModal() {
+  if (document.getElementById('coll-edit-overlay')) return;
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'coll-edit-overlay';
+  overlay.innerHTML = `<div class="modal">
+    <h3 id="coll-edit-title">新建集合</h3>
+    <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">上级集合</label>
+      <select id="coll-edit-parent" onchange="updateCollEditPreview()" style="margin-top:4px;width:100%;padding:6px;border-radius:6px;border:1px solid #ddd;background:#fff;font-size:14px"></select></div>
+    <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">名称</label>
+      <input id="coll-edit-name" oninput="updateCollEditPreview()" placeholder="如：第1课" style="margin-top:4px"></div>
+    <div style="margin-bottom:8px;font-size:13px;color:var(--text2)">完整路径：<b id="coll-edit-preview" style="color:var(--primary)">（顶层）</b></div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-outline" onclick="closeCollEdit()">取消</button><button class="btn btn-primary" onclick="confirmCollEdit()">确定</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function getAllCollections() {
+  var set = {};
+  words.forEach(function(w){ if (w.collection) set[w.collection] = true; });
+  return Object.keys(set).sort();
+}
+function findOptionByValue(sel, val) {
+  for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === val) return sel.options[i]; }
+  return null;
+}
+function openCollEdit(title, currentPath, callback) {
+  createCollEditModal();
+  collEditCallback = callback;
+  document.getElementById('coll-edit-title').textContent = title || '新建集合';
+  var parentSel = document.getElementById('coll-edit-parent');
+  var cols = getAllCollections();
+  parentSel.innerHTML = '<option value="">（顶层，无上级）</option>' + cols.map(function(c) {
+    return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
+  }).join('');
+  var parent = '', name = '';
+  if (currentPath && currentPath.indexOf('/') >= 0) {
+    var idx = currentPath.lastIndexOf('/');
+    parent = currentPath.substring(0, idx);
+    name = currentPath.substring(idx + 1);
+  } else { name = currentPath || ''; }
+  parentSel.value = parent;
+  document.getElementById('coll-edit-name').value = name;
+  updateCollEditPreview();
+  document.getElementById('coll-edit-overlay').classList.add('show');
+  setTimeout(function(){ var n = document.getElementById('coll-edit-name'); if (n) n.focus(); }, 50);
+}
+function updateCollEditPreview() {
+  var parent = document.getElementById('coll-edit-parent').value;
+  var name = document.getElementById('coll-edit-name').value.trim();
+  var full = parent ? (parent + '/' + name) : name;
+  document.getElementById('coll-edit-preview').textContent = full || '（顶层）';
+}
+function confirmCollEdit() {
+  var parent = document.getElementById('coll-edit-parent').value;
+  var name = document.getElementById('coll-edit-name').value.trim();
+  var full = parent ? (parent + '/' + name) : name;
+  var cb = collEditCallback;
+  closeCollEdit();
+  if (cb) cb(full);
+}
+function closeCollEdit() {
+  var o = document.getElementById('coll-edit-overlay');
+  if (o) o.classList.remove('show');
+  collEditCallback = null;
+}
+
 // ===== Select All / Clear All Collections =====
 function selAllCollections() {
   document.querySelectorAll('.coll-option').forEach(function(opt) {
@@ -1123,20 +1179,18 @@ function createAddModalElements() {
 
 function onAddCollChange(sel) {
   if (sel.value === '__new__') {
-    var name = prompt('请输入新集合名称：');
-    if (!name || !name.trim()) { sel.value = ''; return; }
-    name = name.trim();
-    // Check if already exists
-    var opt = sel.querySelector('option[value="' + name + '"]');
-    if (!opt) {
-      opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      // Insert before the __new__ option
-      var newOpt = sel.querySelector('option[value="__new__"]');
-      sel.insertBefore(opt, newOpt);
-    }
-    sel.value = name;
+    sel.value = '';
+    openCollEdit('新建集合', '', function(finalPath) {
+      if (!finalPath) return;
+      var opt = findOptionByValue(sel, finalPath);
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = finalPath; opt.textContent = finalPath;
+        var newOpt = sel.querySelector('option[value="__new__"]');
+        if (newOpt) sel.insertBefore(opt, newOpt); else sel.appendChild(opt);
+      }
+      sel.value = finalPath;
+    });
   }
 }
 
@@ -1882,15 +1936,13 @@ updateCollectionList();
 function changeCollection(idx) {
   var w=words[idx];
   if(!w){alert("词语不存在");return;}
-  var newCol=prompt("修改集合名称（当前："+(w.collection||"无")+"）",w.collection||"");
-  if(newCol!==null){
-    newCol=newCol.trim();
-    w.collection=newCol;
+  openCollEdit('修改集合', w.collection || '', function(finalPath) {
+    w.collection = finalPath;
     saveData();
     renderWordList();
     updateCollectionList();
-    showToast("已移动到 "+escapeHtml(w.collection));
-  }
+    showToast(finalPath ? ('已移动到 ' + escapeHtml(finalPath)) : '已移出集合');
+  });
 }
 
 // ===== Import / Export =====
