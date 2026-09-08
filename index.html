@@ -297,7 +297,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="card" style="text-align:center" >
     <h3 style="margin-bottom:8px" >📱 关于</h3>
     <p style="font-size:18px;font-weight:600;color:var(--primary)" >默写助手</p>
-    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.8</p>
+    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.9</p>
     <p style="font-size:12px;color:var(--text2);margin-top:6px" >帮助孩子高效练习默写的工具</p>
   </div>
   <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px" >清除所有数据</button>
@@ -349,7 +349,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '1.0.9';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -902,10 +902,11 @@ function createCollEditModal() {
   overlay.id = 'coll-edit-overlay';
   overlay.innerHTML = `<div class="modal">
     <h3 id="coll-edit-title">新建集合</h3>
-    <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">上级集合</label>
-      <select id="coll-edit-parent" onchange="onCollEditParentChange()" style="margin-top:4px;width:100%;padding:6px;border-radius:6px;border:1px solid #ddd;background:#fff;font-size:14px"></select></div>
-    <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">名称</label>
-      <input id="coll-edit-name" oninput="updateCollEditPreview()" placeholder="如：第1课" style="margin-top:4px"></div>
+    <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">名称（本层集合名）</label>
+      <input id="coll-edit-name" oninput="updateCollEditPreview()" placeholder="如：第1课" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:#fff;color:var(--text);font-family:inherit;box-sizing:border-box"></div>
+    <div style="margin-bottom:6px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">上级集合（可选，留空即顶层）</label>
+      <select id="coll-edit-parent" onchange="onCollEditParentChange()" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:#fff;color:var(--text);font-family:inherit;box-sizing:border-box"></select></div>
+    <div id="coll-edit-newparent-wrap" style="display:none;margin-bottom:12px"><input id="coll-edit-newparent" oninput="onCollEditNewParentInput()" placeholder="如：三年级/上册（可用 / 分隔多级）" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:#fff;color:var(--text);font-family:inherit;box-sizing:border-box"></div>
     <div style="margin-bottom:8px;font-size:13px;color:var(--text2)">完整路径：<b id="coll-edit-preview" style="color:var(--primary)">（顶层）</b></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-outline" onclick="closeCollEdit()">取消</button><button class="btn btn-primary" onclick="confirmCollEdit()">确定</button></div>
   </div>`;
@@ -935,37 +936,51 @@ function openCollEdit(title, currentPath, callback) {
     parent = currentPath.substring(0, idx);
     name = currentPath.substring(idx + 1);
   } else { name = currentPath || ''; }
+  // 若解析出的上级不在现有集合中，则当作"新建上级"处理
+  if (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) {
+    // 暂以"新建上级"呈现，回填路径到新建输入框
+  }
   parentSel.value = parent;
   document.getElementById('coll-edit-name').value = name;
+  document.getElementById('coll-edit-newparent').value = (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) ? parent : '';
+  document.getElementById('coll-edit-newparent-wrap').style.display = (parent && parent !== '__new_parent__' && !findOptionByValue(parentSel, parent)) ? 'block' : 'none';
   updateCollEditPreview();
   document.getElementById('coll-edit-overlay').classList.add('show');
   setTimeout(function(){ var n = document.getElementById('coll-edit-name'); if (n) n.focus(); }, 50);
 }
 function updateCollEditPreview() {
-  var parent = document.getElementById('coll-edit-parent').value;
+  var parentSel = document.getElementById('coll-edit-parent');
   var name = document.getElementById('coll-edit-name').value.trim();
+  var parent = parentSel.value;
+  if (parent === '__new_parent__') parent = document.getElementById('coll-edit-newparent').value.trim();
   var full = parent ? (parent + '/' + name) : name;
   document.getElementById('coll-edit-preview').textContent = full || '（顶层）';
 }
 function onCollEditParentChange() {
   var parentSel = document.getElementById('coll-edit-parent');
+  var wrap = document.getElementById('coll-edit-newparent-wrap');
   if (parentSel && parentSel.value === '__new_parent__') {
-    var p = window.prompt('输入新的上级集合路径（可用 / 分隔多级，例如：三年级/上册）', '');
-    if (p === null || !(p = p.trim())) { parentSel.value = ''; updateCollEditPreview(); return; }
-    var opt = findOptionByValue(parentSel, p);
-    if (!opt) {
-      opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      var np = parentSel.querySelector('option[value="__new_parent__"]');
-      if (np) parentSel.insertBefore(opt, np); else parentSel.appendChild(opt);
-    }
-    parentSel.value = p;
+    wrap.style.display = 'block';
+    var np = document.getElementById('coll-edit-newparent');
+    if (np) { np.value = ''; np.focus(); }
+  } else {
+    wrap.style.display = 'none';
   }
   updateCollEditPreview();
 }
+function onCollEditNewParentInput() {
+  updateCollEditPreview();
+}
 function confirmCollEdit() {
-  var parent = document.getElementById('coll-edit-parent').value;
+  var parentSel = document.getElementById('coll-edit-parent');
   var name = document.getElementById('coll-edit-name').value.trim();
+  if (!name) {
+    alert('请填写集合名称（名称不能为空）');
+    document.getElementById('coll-edit-name').focus();
+    return;
+  }
+  var parent = parentSel.value;
+  if (parent === '__new_parent__') parent = document.getElementById('coll-edit-newparent').value.trim();
   var full = parent ? (parent + '/' + name) : name;
   var cb = collEditCallback;
   closeCollEdit();
