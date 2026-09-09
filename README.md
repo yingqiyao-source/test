@@ -2,7 +2,7 @@
 
 一个面向中小学学生的**语文 + 英语默写练习工具**。纯前端单文件网页应用，打开即用，支持汉字词语、英语单词、英语句子与课文默写，内置语音朗读、手写板、自动批改、错题订正与抄写练习。
 
-> 当前版本：`1.0.15` ｜ 许可证：ISC ｜ 形态：单文件网页应用（PWA，可打包 Android）
+> 当前版本：`1.0.16` ｜ 许可证：ISC ｜ 形态：单文件网页应用（PWA，可打包 Android）
 
 ## ✨ 功能特性
 
@@ -103,6 +103,12 @@ dictation-assistant/
 - 单人维护，仓库尚在持续打磨中。
 
 ## 📌 更新日志 (Changelog)
+
+### v1.0.16（2026-09-09）
+- 🐛 **修复「清除所有数据」后默写页残留原数据**：原 `clearAllData()` 只清空 `words`/`history` 并重渲染词库与统计，未重置进行中的默写会话（`dictList`/`dictResults`/`dictIdx`），也未刷新默写页的集合选择器（`updateCollectionList`），且漏清错题集 `wrongBook`。
+  - 现 `clearAllData()` 一并清空 `wrongBook` 并 `saveData()`；重置 `dictList`/`dictResults`/`dictIdx`/`dictStartTime`/`hwRestoreImg`，若正停留在默写/练习页则退回默写设置页；重渲染词库、统计、**默写集合列表**、错题集。
+  - `switchPage('dictation')` 进入默写页时额外调用 `updateCollectionList()`，确保集合选择器始终按当前 `words` 重新渲染，杜绝任何残留。
+  - 验证：`_github_review/test_clear.js`（jsdom，17 项断言 ALL PASS）；`test_v1015.js` 回归无破坏。
 
 ### v1.0.15（2026-09-09）
 - **默写可返回上一题修改**：默写答题页新增「← 上一题」按钮（仅非第一题时显示）。点击后保存当前进度并返回上一题，已填写的答案/已手写内容自动回填；回到该题修改后「确定」即原地覆盖（不再追加重复结果），可一路前进回到原处。课文手写题返回时，手写板会显示「上次手写」参考图，可参考后重新书写覆盖。
