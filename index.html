@@ -351,7 +351,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.12';
+const APP_VERSION = '1.0.13';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -903,6 +903,7 @@ function createCollEditModal() {
   var overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'coll-edit-overlay';
+  overlay.style.zIndex = '400';
   overlay.innerHTML = `<div class="modal">
     <h3 id="coll-edit-title">新建集合</h3>
     <div style="margin-bottom:12px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">名称（本层集合名）</label>
