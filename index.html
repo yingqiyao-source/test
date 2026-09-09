@@ -60,6 +60,8 @@ textarea{resize:vertical;min-height:80px}
 .collection-header .coll-name{font-size:15px;font-weight:600;flex:1}
 .collection-header .coll-count{font-size:12px;color:var(--text2);background:#fff;border:1px solid var(--border);padding:2px 9px;border-radius:999px}
 .collection-header .coll-expand{font-size:12px;color:var(--primary);margin-left:10px}
+.collection-header .coll-actions{display:flex;gap:6px;margin-left:10px}
+.collection-header .coll-actions .icon-btn{width:30px;height:30px;font-size:14px}
 .collection-body{padding-left:8px}
 .collection-parent{padding-left:0}
 .collection-parent > .collection-group > .collection-header{background:#e6f0fd}
@@ -297,7 +299,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="card" style="text-align:center" >
     <h3 style="margin-bottom:8px" >📱 关于</h3>
     <p style="font-size:18px;font-weight:600;color:var(--primary)" >默写助手</p>
-    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.11</p>
+    <p style="font-size:13px;color:var(--text2);margin-top:4px" id="about-version" >版本 1.0.12</p>
     <p style="font-size:12px;color:var(--text2);margin-top:6px" >帮助孩子高效练习默写的工具</p>
   </div>
   <button class="btn btn-danger btn-block" onclick="clearAllData()" style="margin-top:12px" >清除所有数据</button>
@@ -349,7 +351,7 @@ textarea{resize:vertical;min-height:80px}
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.11';
+const APP_VERSION = '1.0.12';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -673,6 +675,7 @@ function toggleCpEraser() {
 var hwCanvases = [];
 var hwContexts = [];
 let words = [];
+let editWordIdx = -1;
 let history = [];
 try { words = JSON.parse(localStorage.getItem('dictation_words') || '[]'); } catch(e) {}
 try { history = JSON.parse(localStorage.getItem('dictation_history') || '[]'); } catch(e) {}
@@ -1071,6 +1074,10 @@ function renderWordList() {
           '<span class="coll-name" style="' + nameStyle + '">' + (depth === 0 ? '📁 ' : '📂 ') + escapeHtml(key) + '</span>' +
           '<span class="coll-count">' + totalItems + '</span>' +
           '<span class="coll-expand">' + (isCollapsed ? '展开' : '收起') + '</span>' +
+          '<span class="coll-actions">' +
+            '<button class="icon-btn" title="重命名集合" data-path="' + escapeHtml(fullPath) + '" onclick="event.stopPropagation();renameCollectionFromBtn(this)">✏️</button>' +
+            '<button class="icon-btn danger" title="删除集合及全部词语" data-path="' + escapeHtml(fullPath) + '" onclick="event.stopPropagation();deleteCollectionFromBtn(this)">🗑️</button>' +
+          '</span>' +
         '</div>' +
         '<div class="collection-body" style="display:' + (isCollapsed ? 'none' : 'block') + '">' +
           renderLevel(child.children || {}, depth + 1) +
@@ -1153,7 +1160,8 @@ function renderWordItem(w, depth) {
       (w.collection ? '<span class="tag tag-collection" style="cursor:pointer" onclick="changeCollection(' + realIdx + ')">' + escapeHtml(w.collection) + '</span>' : '') +
     '</div>' +
     '<div class="actions">' +
-      '<button class="icon-btn danger" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
+      '<button class="icon-btn" title="修改" onclick="event.stopPropagation();editWord(' + realIdx + ')">✏️</button>' +
+      '<button class="icon-btn danger" title="删除" onclick="event.stopPropagation();deleteWord(' + realIdx + ')">🗑️</button>' +
     '</div>' +
   '</div>';
 }
@@ -1203,7 +1211,7 @@ function createAddModalElements() {
   overlay.innerHTML = `<div class="modal">
     <h3 id="add-modal-title">添加词语</h3>
     <div id="add-manual">
-      <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">类型</label><select id="add-type" style="margin-top:4px" onchange="updateAddPlaceholders(this.value)"><option value="cn">语文词语</option><option value="en" selected>英语单词</option><option value="en-sentence">英语句子</option><option value="textbook">课文默写</option></select></div>
+      <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">类型</label><select id="add-type" style="margin-top:4px" onchange="onUpdateAddType(this.value)"><option value="cn">语文词语</option><option value="en" selected>英语单词</option><option value="en-sentence">英语句子</option><option value="textbook">课文默写</option></select></div>
       <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">所属集合</label><select id="add-collection" onchange="onAddCollChange(this)" style="margin-top:4px;width:100%;padding:6px;border-radius:6px;border:1px solid #ddd;background:#fff;font-size:14px"><option value="">— 选择集合（可选）—</option></select></div>
       <div style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)" id="add-word-label">词语/单词</label><input id="add-word" placeholder="如：璀璨 / beautiful" style="margin-top:4px"></div>
       <div id="add-batch-section" style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)" id="add-batch-label">批量添加（每行一个）</label><textarea id="add-batch" placeholder="璀璨" style="margin-top:4px"></textarea></div>
@@ -1233,6 +1241,7 @@ function onAddCollChange(sel) {
 }
 
 function showAddModal(mode) {
+  editWordIdx = -1;
   createAddModalElements();
   var m = document.getElementById('add-modal');
   if (!m) { alert('错误：无法创建弹窗'); return; }
@@ -1301,8 +1310,14 @@ function updateAddPlaceholders(type) {
   }
 }
 
+function onUpdateAddType(val) {
+  updateAddPlaceholders(val);
+  if (editWordIdx >= 0) { var bs = document.getElementById('add-batch-section'); if (bs) bs.style.display = 'none'; }
+}
+
 function closeAddModal() {
   document.getElementById('add-modal').classList.remove('show');
+  editWordIdx = -1;
   document.getElementById('add-word').value = '';
   document.getElementById('add-batch').value = '';
   document.getElementById('add-collection').value = '';
@@ -1317,6 +1332,25 @@ function saveWord() {
   var batchEl = document.getElementById('add-batch');
   if (!typeEl || !collEl || !wordEl || !batchEl) {
     showAddModal('manual');
+    return;
+  }
+  // 修改模式：替换已有词语（单条，忽略批量）
+  if (editWordIdx >= 0) {
+    var eType = typeEl.value;
+    var eColl = collEl.value.trim();
+    var eWord = wordEl.value.trim();
+    if (eType === 'textbook') {
+      var eContent = (document.getElementById('add-textbook-content') || {}).value || '';
+      if (!eWord && !eContent.trim()) { alert('请输入课文标题或内容'); return; }
+      words[editWordIdx] = { word: (eContent.trim() || eWord), title: (eWord || '未命名'), type: 'textbook', collection: eColl };
+    } else {
+      if (!eWord) { alert('请输入内容'); return; }
+      words[editWordIdx] = { word: eWord, type: eType, collection: eColl };
+    }
+    editWordIdx = -1;
+    saveData();
+    closeAddModal();
+    renderWordList();
     return;
   }
   var type = typeEl.value;
@@ -1983,6 +2017,88 @@ function changeCollection(idx) {
   });
 }
 
+// 集合标题栏按钮通过 data-path 读取，避免路径含引号/&等字符时注入 onclick 出错
+function renameCollectionFromBtn(btn) { renameCollection(btn.getAttribute('data-path')); }
+function deleteCollectionFromBtn(btn) { deleteCollection(btn.getAttribute('data-path')); }
+
+// 删除整个集合（含子集合内全部词语）
+function deleteCollection(fullPath) {
+  if (!confirm('确定删除集合「' + fullPath + '」及其包含的全部词语（含子集合）吗？此操作不可撤销。')) return;
+  var before = words.length;
+  words = words.filter(function(w) {
+    var c = w.collection || '';
+    return !(c === fullPath || c.indexOf(fullPath + '/') === 0);
+  });
+  var removed = before - words.length;
+  saveData();
+  renderWordList();
+  renderStats();
+  updateCollectionList();
+  showToast('已删除集合及 ' + removed + ' 个词语');
+}
+
+// 重命名集合：替换所有命中词语 collection 路径的前缀（含子树）
+function renameCollection(oldPath) {
+  openCollEdit('重命名集合', oldPath, function(finalPath) {
+    if (!finalPath) { showToast('集合名未改变'); return; }
+    if (finalPath === oldPath) { showToast('集合名未改变'); return; }
+    words.forEach(function(w) {
+      var c = w.collection || '';
+      if (c === oldPath) w.collection = finalPath;
+      else if (c.indexOf(oldPath + '/') === 0) w.collection = finalPath + c.substring(oldPath.length);
+    });
+    saveData();
+    renderWordList();
+    updateCollectionList();
+    showToast('已重命名为：' + escapeHtml(finalPath));
+  });
+}
+
+// 修改已添加的词语/课文：预填弹窗并以编辑模式保存
+function editWord(idx) {
+  var w = words[idx];
+  if (!w) { alert('词语不存在'); return; }
+  editWordIdx = idx;
+  createAddModalElements();
+  var m = document.getElementById('add-modal');
+  if (!m) { alert('错误：无法创建弹窗'); return; }
+  m.classList.add('show');
+  var typeEl = document.getElementById('add-type');
+  var collEl = document.getElementById('add-collection');
+  var wordEl = document.getElementById('add-word');
+  var manualEl = document.getElementById('add-manual');
+  var photoEl = document.getElementById('add-photo');
+  var titleEl = document.getElementById('add-modal-title');
+  manualEl.style.display = '';
+  photoEl.style.display = 'none';
+  titleEl.textContent = '修改词语';
+  typeEl.value = w.type || 'cn';
+  updateCollectionList();
+  if (w.collection) {
+    if (!findOptionByValue(collEl, w.collection)) {
+      var opt = document.createElement('option');
+      opt.value = w.collection; opt.textContent = w.collection;
+      var newOpt = collEl.querySelector('option[value="__new__"]');
+      if (newOpt) collEl.insertBefore(opt, newOpt); else collEl.appendChild(opt);
+    }
+    collEl.value = w.collection;
+  } else {
+    collEl.value = '';
+  }
+  if (w.type === 'textbook') {
+    wordEl.value = w.title || '';
+    var tb = document.getElementById('add-textbook-content');
+    if (tb) tb.value = w.word || '';
+  } else {
+    wordEl.value = w.word || '';
+    var tb2 = document.getElementById('add-textbook-content');
+    if (tb2) tb2.value = '';
+  }
+  updateAddPlaceholders(w.type || 'cn');
+  var batchSection = document.getElementById('add-batch-section');
+  if (batchSection) batchSection.style.display = 'none';
+}
+
 // ===== Import / Export =====
 function exportWords(){
   try{
@@ -2021,7 +2137,7 @@ function importWords(event){
       });
       saveData();
       renderWordList();
-      updateStats();
+      renderStats();
       updateCollectionList();
       showToast('导入成功！新增 '+added+' 条词语');
     }catch(err){ alert('导入失败：'+err.message); }
