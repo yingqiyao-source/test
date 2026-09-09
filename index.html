@@ -264,7 +264,7 @@ textarea{resize:vertical;min-height:80px}
       <div style="font-weight:600;font-size:15px;margin-bottom:12px" >请核对这道题</div>
       <div style="background:#fafafa;border-radius:8px;padding:8px;margin-bottom:12px" >
         <div style="font-size:12px;color:var(--text2)" >你的手写</div>
-        <img id="review-hw-img" style="max-width:100%;border-radius:6px;margin-top:6px;background:#fafafa" >
+        <img id="review-hw-img" onclick="showReviewLightbox(this.src)" style="max-width:100%;border-radius:6px;margin-top:6px;background:#fafafa;cursor:pointer" title="点击放大" >
       </div>
       <div id="review-ocr-box" style="background:#f0f7ff;border-radius:8px;padding:10px;margin-bottom:12px;display:none" >
         <div style="font-size:12px;color:var(--text2)" >🤖 自动识别结果</div>
@@ -324,11 +324,37 @@ textarea{resize:vertical;min-height:80px}
     <h3>手写答案</h3>
     <button id="hw-speak-btn" class="hw-btn hw-btn-outline" onclick="speak(dictList[dictIdx].word)" style="margin-bottom:8px" >🔊 重新朗读</button>
     <div class="hw-canvas-wrap" id="hw-canvas-wrap" ></div>
+    <div id="hw-pager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-bottom:10px">
+      <button class="hw-btn hw-btn-outline" onclick="hwPrevPage()">← 上一页</button>
+      <span id="hw-pager-info" style="font-size:14px;color:var(--text2);min-width:48px;text-align:center">1 / 1</span>
+      <button class="hw-btn hw-btn-outline" onclick="hwNextPage()">下一页 →</button>
+    </div>
     <div class="hw-actions" >
-      <button class="hw-btn hw-btn-outline" onclick="hwClear()" >清除</button>
+      <button id="hw-clear-btn" class="hw-btn hw-btn-outline" onclick="hwClear()" >清除</button>
       <button class="hw-btn hw-btn-outline" id="hw-eraser-btn" onclick="toggleEraser()" >橡皮</button>
       <button class="hw-btn hw-btn-primary" onclick="hwSubmit()" >提交并下一题</button>
       <button class="hw-btn hw-btn-outline" onclick="hwClose()" >取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review Handwriting Lightbox (点击手写缩略图全屏查看) -->
+<div class="hw-overlay" id="hw-review-lightbox" style="display:none;z-index:450" onclick="closeReviewLightbox()">
+  <div style="max-width:95vw;max-height:90vh;overflow:auto;background:#fff;border-radius:12px;padding:10px" onclick="event.stopPropagation()">
+    <img id="hw-review-lightbox-img" src="" style="max-width:100%;max-height:84vh;display:block;margin:0 auto">
+    <div style="text-align:center;margin-top:8px"><button class="btn btn-outline btn-sm" onclick="closeReviewLightbox()">关闭</button></div>
+  </div>
+</div>
+
+<!-- Wrong Book Page (错题集) -->
+<div id="page-wrongbook" class="page" style="display:none">
+  <div class="card">
+    <h3 style="margin-bottom:12px">📕 错题集</h3>
+    <p id="wrongbook-empty" style="color:var(--text2);display:none">还没有错题，太棒了！继续保持～</p>
+    <div id="wrongbook-list"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startWrongBookPractice()">开始错题练习</button>
+      <button class="btn btn-outline" onclick="clearWrongBook()">清空错题集</button>
     </div>
   </div>
 </div>
@@ -347,11 +373,15 @@ textarea{resize:vertical;min-height:80px}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></svg>
     <span>统计</span>
   </div>
+  <div class="nav-item" data-page="wrongbook" onclick="switchPage('wrongbook')" >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
+    <span>错题集</span>
+  </div>
 </div>
 
 <script>// ===== Selection =====
 let selectedWordIndices = new Set();
-const APP_VERSION = '1.0.13';
+const APP_VERSION = '1.0.14';
 
 function onWordCheck(cb) {
   var idx = parseInt(cb.dataset.idx);
@@ -450,13 +480,51 @@ let wpDraw = false;
 let wpLx = 0;
 let wpLy = 0;
 
-function startWrongPractice() {
-  wpList = dictResults.filter(function(r) { return !r.correct && !r.skipped; });
+var practiceReturn = 'result';
+function startWrongPractice(results) {
+  wpList = (results || dictResults).filter(function(r) { return !r.correct && !r.skipped; });
   if (wpList.length === 0) { alert('没有错题，太棒了！'); return; }
   wpIdx = 0;
   document.getElementById('dictation-result').style.display = 'none';
   document.getElementById('page-wrong-practice').style.display = 'block';
   showWpItem();
+}
+
+// ===== Wrong Book (错题集) =====
+function renderWrongBook() {
+  var list = document.getElementById('wrongbook-list');
+  var empty = document.getElementById('wrongbook-empty');
+  if (!list) return;
+  if (wrongBook.length === 0) { list.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = wrongBook.map(function(w, i) {
+    return '<div class="review-item"><div class="mark wrong">✗</div>' +
+      '<div style="flex:1;min-width:0"><div class="review-q">' + escapeHtml(w.word) + '</div>' +
+      '<div class="result-a" style="font-size:12px">类型:' + escapeHtml(w.type||'-') + (w.collection ? (' · ' + escapeHtml(w.collection)) : '') + ' · 错' + (w.wrongCount||1) + '次</div></div>' +
+      '<button class="btn btn-xs" onclick="practiceWrongItem(' + i + ')">练习</button>' +
+      '<button class="btn btn-xs btn-outline" onclick="removeWrongItem(' + i + ')">已掌握</button></div>';
+  }).join('');
+}
+function startWrongBookPractice() {
+  if (wrongBook.length === 0) { alert('错题集为空'); return; }
+  practiceReturn = 'wrongbook';
+  startWrongPractice(wrongBook.map(function(w) { return { item: w, answer: null, correct: false, skipped: false }; }));
+}
+function practiceWrongItem(i) {
+  var w = wrongBook[i];
+  if (!w) return;
+  practiceReturn = 'wrongbook';
+  startWrongPractice([{ item: w, answer: null, correct: false, skipped: false }]);
+}
+function removeWrongItem(i) {
+  if (i >= 0 && i < wrongBook.length) { wrongBook.splice(i, 1); localStorage.setItem('dictation_wrong_book', JSON.stringify(wrongBook)); renderWrongBook(); }
+}
+function clearWrongBook() {
+  if (wrongBook.length === 0) return;
+  if (!confirm('确定清空错题集？此操作不可恢复。')) return;
+  wrongBook = [];
+  localStorage.setItem('dictation_wrong_book', JSON.stringify(wrongBook));
+  renderWrongBook();
 }
 
 function showWpItem() {
@@ -521,7 +589,8 @@ function wpRetry() {
 
 function wpBack() {
   document.getElementById('page-wrong-practice').style.display = 'none';
-  document.getElementById('dictation-result').style.display = '';
+  if (practiceReturn === 'wrongbook') { document.getElementById('page-wrongbook').style.display = ''; renderWrongBook(); }
+  else { document.getElementById('dictation-result').style.display = ''; }
 }
 
 // ===== Copy Practice (抄写) =====
@@ -674,7 +743,13 @@ function toggleCpEraser() {
 // ===== Data Layer =====
 var hwCanvases = [];
 var hwContexts = [];
+var hwPages = [];
+var hwPageIdx = 0;
+var hwAllCanvases = [];
+var hwMergeVertical = false;
 let words = [];
+let wrongBook = [];
+try { wrongBook = JSON.parse(localStorage.getItem('dictation_wrong_book') || '[]'); } catch(e) {}
 let editWordIdx = -1;
 let history = [];
 try { words = JSON.parse(localStorage.getItem('dictation_words') || '[]'); } catch(e) {}
@@ -712,6 +787,7 @@ function moveSelectedToCollection(){
 function saveData() {
   localStorage.setItem('dictation_words', JSON.stringify(words));
   localStorage.setItem('dictation_history', JSON.stringify(history));
+  localStorage.setItem('dictation_wrong_book', JSON.stringify(wrongBook));
 }
 
 function showToast(msg) {
@@ -736,6 +812,7 @@ function switchPage(page) {
   updateBatchBar();
   if (page === 'words') renderWordList();
   if (page === 'stats') renderStats();
+  if (page === 'wrongbook') renderWrongBook();
 }
 
 // ===== Collections =====
@@ -1608,7 +1685,7 @@ function finishDictation() {
     return '<div class="review-item">' +
       '<div class="mark ' + (r.correct===true ? 'right' : (r.correct===false ? 'wrong' : 'pending')) + '">' + (r.correct===true ? '✓' : (r.correct===false ? '✗' : '?')) + '</div>' +
       '<div><div class="review-q">' + (i+1) + '. ' + escapeHtml(r.item.word) + '</div>' +
-      (r.hwImg ? '<div class="result-hw-img"><img src="' + r.hwImg + '" style="max-height:60px;margin:4px 0;border:1px solid #ccc;border-radius:4px"></div>' : '') +
+      (r.hwImg ? '<div class="result-hw-img"><img src="' + r.hwImg + '" onclick="showReviewLightbox(\'' + r.hwImg + '\')" style="max-height:60px;margin:4px 0;border:1px solid #ccc;border-radius:4px;cursor:pointer" title="点击放大"></div>' : '') +
       (r.skipped ? '<div class="result-a">已跳过</div>' : (r.correct===null ? '<div class="result-a">你的答案（手写）：</div>' : '<div class="result-a">你的答案：' + escapeHtml(r.answer || '（无）') + '</div>')) +
       (r.ocrText ? '<div class="result-ocr">OCR：' + escapeHtml(r.ocrText) + ' (score:' + (r.score||0).toFixed(2) + ')</div>' : '') +
       (r.correct === null ? '<div class="result-manual"><button class="btn btn-xs" onclick="manualMark(' + i + ',true)">✓ 判对</button> <button class="btn btn-xs btn-outline" onclick="manualMark(' + i + ',false)">✗ 判错</button></div>' : '') +
@@ -1617,8 +1694,20 @@ function finishDictation() {
   }).join('');
   history.push({ date: Date.now(), score: score, total: total, correct: correct });
   saveData();
-
-
+  // ===== 错题集：按本次默写结果自动更新（答错/跳过加入，答对移除） =====
+  dictResults.forEach(function(r) {
+    var it = r.item || {};
+    var key = (it.word||'') + '|' + (it.collection||'') + '|' + (it.type||'');
+    var wi = -1;
+    for (var i = 0; i < wrongBook.length; i++) { if (wrongBook[i]._key === key) { wi = i; break; } }
+    if (r.correct === true) {
+      if (wi >= 0) wrongBook.splice(wi, 1);
+    } else {
+      if (wi >= 0) { wrongBook[wi].wrongCount = (wrongBook[wi].wrongCount||1) + 1; wrongBook[wi].lastWrong = Date.now(); }
+      else wrongBook.push({ _key:key, word:it.word, pinyin:it.pinyin||'', collection:it.collection||'', type:it.type||'', title:it.title||'', wrongCount:1, lastWrong:Date.now(), addTime:Date.now() });
+    }
+  });
+  localStorage.setItem('dictation_wrong_book', JSON.stringify(wrongBook));
 
 }
 
@@ -1638,6 +1727,7 @@ function toggleEraser() {
 }
 function hwOpen() {
   if (dictIdx >= dictList.length) return;
+  hwDisarmClear();
   var item = dictList[dictIdx];
   var word = item.word;
   var isLong = word.length > 6 || item.type === 'en-sentence';
@@ -1650,20 +1740,33 @@ function hwOpen() {
   wrap.innerHTML = '';
   hwCanvases = [];
   hwContexts = [];
-  if (isLong || item.type === 'en-sentence' || item.type === 'textbook') {
-    var charCount = word.length;
-    // 课文默写：根据内容长度自动调整高度，避免写不下
-    var canvasH = 200;
-    if (item.type === 'textbook') {
-      if (charCount > 150) canvasH = 500;
-      else if (charCount > 80) canvasH = 400;
-      else if (charCount > 40) canvasH = 300;
-    }
+  hwPages = [];
+  hwAllCanvases = [];
+  hwPageIdx = 0;
+  hwMergeVertical = false;
+  if (item.type === 'textbook') {
+    // 课文默写：按段落分页，每页一个手写区，避免区域太小写不下
+    var paras = word.split('\n').map(function(s){return s.trim();}).filter(function(s){return s.length;});
+    if (paras.length === 0) paras = [word];
+    hwMergeVertical = true;
+    paras.forEach(function(p) {
+      var ch = p.length;
+      var h = 200;
+      if (ch > 150) h = 520; else if (ch > 80) h = 420; else if (ch > 40) h = 320; else if (ch > 20) h = 260;
+      var canvas = document.createElement('canvas');
+      canvas.style.cssText = 'width:100%;height:' + h + 'px;border-radius:8px;touch-action:none';
+      hwPages.push({ nodes: [canvas], canvases: [canvas] });
+      hwAllCanvases.push(canvas);
+    });
+  } else if (isLong || item.type === 'en-sentence') {
+    var canvasH = 220;
     var canvas = document.createElement('canvas');
     canvas.style.cssText = 'width:100%;height:' + canvasH + 'px;border-radius:8px;touch-action:none';
-    wrap.appendChild(canvas);
-    hwCanvases.push(canvas);
+    hwPages.push({ nodes: [canvas], canvases: [canvas] });
+    hwAllCanvases.push(canvas);
   } else {
+    // 单词：逐字 cell（单页，不翻页）
+    var nodes = [], canvases = [];
     for (var i = 0; i < word.length; i++) {
       var cell = document.createElement('div');
       cell.className = 'hw-cell';
@@ -1671,12 +1774,27 @@ function hwOpen() {
       var canvas = document.createElement('canvas');
       canvas.style.cssText = 'width:100%;height:100%;display:block;touch-action:none';
       cell.appendChild(canvas);
-      wrap.appendChild(cell);
-      hwCanvases.push(canvas);
+      nodes.push(cell); canvases.push(canvas);
     }
+    hwPages.push({ nodes: nodes, canvases: canvases });
+    hwAllCanvases = hwAllCanvases.concat(canvases);
   }
+  updateHwPager();
+  document.getElementById('hw-overlay').classList.add('show');
+  renderHwPage(0);
+}
+
+function renderHwPage(idx) {
+  hwPageIdx = idx;
+  var p = hwPages[idx];
+  var wrap = document.getElementById('hw-canvas-wrap');
+  wrap.innerHTML = '';
+  p.nodes.forEach(function(n) { wrap.appendChild(n); });
+  hwCanvases = p.canvases.slice();
+  hwContexts = p.canvases.map(function(c) { return c.getContext('2d'); });
   setTimeout(function() {
-    hwCanvases.forEach(function(c) {
+    p.canvases.forEach(function(c) {
+      if (c._inited) return; // 翻回已写过的一页，保留原内容
       c.getBoundingClientRect();
       var w = c.parentElement.clientWidth || 120;
       var h = c.parentElement.clientHeight || 120;
@@ -1690,12 +1808,23 @@ function hwOpen() {
       ctx.lineJoin = 'round';
       ctx.fillStyle = '#fafafa';
       ctx.fillRect(0, 0, c.width, c.height);
-      hwContexts.push(ctx);
+      c._inited = true;
       bindHwCanvas(c, ctx);
     });
   }, 50);
-  document.getElementById('hw-overlay').classList.add('show');
+  updateHwPager();
 }
+
+function updateHwPager() {
+  var pager = document.getElementById('hw-pager');
+  if (!pager) return;
+  if (hwPages.length <= 1) { pager.style.display = 'none'; return; }
+  pager.style.display = 'flex';
+  document.getElementById('hw-pager-info').textContent = (hwPageIdx + 1) + ' / ' + hwPages.length;
+}
+
+function hwPrevPage() { if (hwPageIdx > 0) renderHwPage(hwPageIdx - 1); }
+function hwNextPage() { if (hwPageIdx < hwPages.length - 1) renderHwPage(hwPageIdx + 1); }
 
 function bindHwCanvas(canvas, ctx) {
   var drawing = false, lx = 0, ly = 0;
@@ -1727,19 +1856,38 @@ function bindHwCanvas(canvas, ctx) {
   canvas.onmouseleave = function() { drawing=false; };
 }
 
+var hwClearArmed = false;
+var hwClearTimer = null;
+function hwDisarmClear() {
+  hwClearArmed = false;
+  if (hwClearTimer) { clearTimeout(hwClearTimer); hwClearTimer = null; }
+  var btn = document.getElementById('hw-clear-btn');
+  if (btn) { btn.textContent = '清除'; btn.style.background = ''; btn.style.color = ''; }
+}
 function hwClear() {
+  if (!hwClearArmed) {
+    // 第一次点击：进入确认态（避免误点清除刚写的内容）
+    hwClearArmed = true;
+    var btn = document.getElementById('hw-clear-btn');
+    if (btn) { btn.textContent = '确认清除？'; btn.style.background = '#ffcdd2'; btn.style.color = '#b71c1c'; }
+    if (hwClearTimer) clearTimeout(hwClearTimer);
+    hwClearTimer = setTimeout(hwDisarmClear, 3000);
+    return;
+  }
+  // 二次点击确认：真正清除当前手写内容
   hwContexts.forEach(function(ctx) { ctx.fillStyle='#fafafa'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height); });
   hwEraserMode = false;
-  var btn = document.getElementById('hw-eraser-btn');
-  if(btn) { btn.textContent = '橡皮'; btn.style.background = ''; }
+  var eBtn = document.getElementById('hw-eraser-btn');
+  if (eBtn) { eBtn.textContent = '橡皮'; eBtn.style.background = ''; }
+  hwDisarmClear();
 }
 
 async function hwSubmit() {
   var item = dictList[dictIdx];
   // Collect data URLs from handwriting canvases
-  var dataUrls = hwCanvases.map(function(c) { return c.toDataURL('image/png'); });
+  var dataUrls = hwAllCanvases.map(function(c) { return c.toDataURL('image/png'); });
   if(dataUrls.length === 0) { alert('请先写答案'); return; }
-  var merged = await mergeHwImages(dataUrls);
+  var merged = await mergeHwImages(dataUrls, hwMergeVertical);
   if(!merged) { alert('Error merging images'); return; }
   dictResults.push({
     item: item,
@@ -1755,7 +1903,7 @@ async function hwSubmit() {
   showDictItem();
 }
 
-function mergeHwImages(dataUrls) {
+function mergeHwImages(dataUrls, vertical) {
   return new Promise(function(resolve) {
     var imgs = [];
     var loaded = 0;
@@ -1765,14 +1913,27 @@ function mergeHwImages(dataUrls) {
         imgs[i] = img;
         loaded++;
         if (loaded === dataUrls.length) {
-          var totalW = 0, maxH = 0;
-          imgs.forEach(function(img) { totalW += img.width; if (img.height > maxH) maxH = img.height; });
+          var totalW = 0, maxH = 0, totalH = 0, maxW = 0;
+          imgs.forEach(function(img) {
+            totalW += img.width;
+            if (img.height > maxH) maxH = img.height;
+            totalH += img.height;
+            if (img.width > maxW) maxW = img.width;
+          });
           var canvas = document.createElement('canvas');
-          canvas.width = totalW;
-          canvas.height = maxH;
           var ctx = canvas.getContext('2d');
-          var x = 0;
-          imgs.forEach(function(img) { ctx.drawImage(img, x, 0); x += img.width; });
+          if (vertical) {
+            // 课文分页：纵向拼接（段1在上，段2在下...）
+            canvas.width = maxW;
+            canvas.height = totalH;
+            var y = 0;
+            imgs.forEach(function(img) { ctx.drawImage(img, 0, y); y += img.height; });
+          } else {
+            canvas.width = totalW;
+            canvas.height = maxH;
+            var x = 0;
+            imgs.forEach(function(img) { ctx.drawImage(img, x, 0); x += img.width; });
+          }
           resolve(canvas.toDataURL('image/png'));
         }
       };
@@ -1896,6 +2057,16 @@ function showFinalResult() {
   var score = total > 0 ? Math.round(correct / total * 100) : 0;
   document.getElementById('result-score').textContent = score + '%';
   document.getElementById('result-score').className = 'score ' + (score >= 60 ? 'good' : 'bad');
+}
+
+// 手写缩略图全屏放大查看
+function showReviewLightbox(src) {
+  if (!src) return;
+  document.getElementById('hw-review-lightbox-img').src = src;
+  document.getElementById('hw-review-lightbox').style.display = 'flex';
+}
+function closeReviewLightbox() {
+  document.getElementById('hw-review-lightbox').style.display = 'none';
 }
 
 // ===== Stats =====
